@@ -100,28 +100,38 @@
     filter.addEventListener('change', renderPhysical);
   });
 
-  const hedgePercentForm = document.querySelector('[data-form="hedge-percent"]');
-  hedgePercentForm.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const formData = new FormData(hedgePercentForm);
-    data.hedgeExposure({
-      commodity: formData.get('commodity'),
-      percent: Number(formData.get('percent')) || 0,
-      month: formData.get('month')
+  const hedgeActionsForm = document.querySelector('[data-form="hedge-actions"]');
+  if (hedgeActionsForm) {
+    hedgeActionsForm.addEventListener('change', (e) => {
+      if (e.target.name === 'actionType') {
+        renderHedge();
+      } else {
+        validateAndPreviewHedgeForm();
+      }
     });
-  });
+    hedgeActionsForm.addEventListener('input', () => validateAndPreviewHedgeForm());
+    hedgeActionsForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const formData = new FormData(hedgeActionsForm);
+      const actionType = formData.get('actionType');
 
-  const rollForm = document.querySelector('[data-form="roll-month"]');
-  rollForm.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const formData = new FormData(rollForm);
-    data.rollMonth({
-      symbol: formData.get('symbol'),
-      from: formData.get('from'),
-      to: formData.get('to')
+      if (actionType === 'hedge') {
+        const commodity = formData.get('commodity');
+        const percent = Number(formData.get('percent'));
+        data.hedgeExposure({ commodity, percent, month: formData.get('month') });
+        utils.showToast(`Hedged ${percent}% ${commodity} in ${formData.get('month')}`, 'success');
+      } else {
+        const fromSelect = hedgeActionsForm.querySelector('[name="from"]');
+        const selectedOption = fromSelect.options[fromSelect.selectedIndex];
+        const symbol = selectedOption.dataset.symbol;
+        const from = formData.get('from');
+        const to = formData.get('to');
+        data.rollMonth({ symbol, from, to });
+        utils.showToast(`Rolled ${symbol} from ${from} to ${to}: +$12.5k MTM`, 'success');
+      }
+      renderHedge();
     });
-    renderHedge();
-  });
+  }
 
   function activateRoute(route) {
     if (activeRoute === route) {
@@ -416,39 +426,118 @@
     const exposureContainer = document.querySelector('[data-role="hedge-exposure"]');
     exposureContainer.innerHTML = '';
     Object.entries(exposure.byCommodity).forEach(([commodity, values]) => {
-      const ratio = Math.round((values.hedged / values.physical) * 100);
+      const ratio = values.physical > 0 ? Math.round((values.hedged / values.physical) * 100) : 0;
       const line = utils.createElement('div', { html: `<strong>${commodity}</strong> · ${values.physical.toLocaleString()} phys / ${values.hedged.toLocaleString()} hedged → ${ratio}%` });
       exposureContainer.appendChild(line);
     });
 
+    updateHedgeFormUI();
+    validateAndPreviewHedgeForm();
+
     const futures = data.getFutures();
-    const commoditySelect = hedgePercentForm.querySelector('select[name="commodity"]');
-    commoditySelect.innerHTML = '';
-    Object.keys(exposure.byCommodity).forEach((commodity) => {
-      commoditySelect.appendChild(utils.createElement('option', { text: commodity, attrs: { value: commodity } }));
-    });
 
-    const monthSelect = hedgePercentForm.querySelector('select[name="month"]');
-    monthSelect.innerHTML = '';
-    futures.suggestedMonths.forEach((suggestion) => {
-      monthSelect.appendChild(utils.createElement('option', { text: `${suggestion.month} (${suggestion.board.toFixed(2)})`, attrs: { value: suggestion.month } }));
-    });
+    function updateHedgeFormUI() {
+      const fieldsContainer = hedgeActionsForm.querySelector('[data-role="actions-fields"]');
+      const actionType = hedgeActionsForm.querySelector('input[name="actionType"]:checked').value;
+      fieldsContainer.innerHTML = ''; // Clear previous fields
 
-    const symbolSelect = rollForm.querySelector('select[name="symbol"]');
-    const fromSelect = rollForm.querySelector('select[name="from"]');
-    const toSelect = rollForm.querySelector('select[name="to"]');
-    symbolSelect.innerHTML = '';
-    fromSelect.innerHTML = '';
-    toSelect.innerHTML = '';
-    futures.positions.forEach((position) => {
-      if (!Array.from(symbolSelect.options).find((opt) => opt.value === position.symbol)) {
-        symbolSelect.appendChild(utils.createElement('option', { text: position.symbol, attrs: { value: position.symbol } }));
+      if (actionType === 'hedge') {
+        const topExposureCommodity = Object.keys(exposure.byCommodity).reduce((a, b) => exposure.byCommodity[a].physical > exposure.byCommodity[b].physical ? a : b);
+
+        const commodityLabel = utils.createElement('label', { text: 'Commodity' });
+        const commoditySelect = utils.createElement('select', { attrs: { name: 'commodity' } });
+        Object.keys(exposure.byCommodity).forEach((commodity) => {
+          const option = utils.createElement('option', { text: commodity, attrs: { value: commodity } });
+          if (commodity === topExposureCommodity) {
+            option.selected = true;
+          }
+          commoditySelect.appendChild(option);
+        });
+        commodityLabel.appendChild(commoditySelect);
+
+        const percentContainer = utils.createElement('div', { className: 'form-group--slider' });
+        const percentLabel = utils.createElement('label', { text: 'Percent' });
+        const percentSlider = utils.createElement('input', { attrs: { type: 'range', name: 'percent', min: '0', max: '100', value: '50' } });
+        const percentInput = utils.createElement('input', { className: 'input--small', attrs: { type: 'number', name: 'percent-display', min: '0', max: '100', value: '50' }});
+
+        percentSlider.addEventListener('input', () => percentInput.value = percentSlider.value);
+        percentInput.addEventListener('input', () => percentSlider.value = percentInput.value);
+
+        percentContainer.appendChild(percentLabel);
+        percentContainer.appendChild(percentSlider);
+        percentContainer.appendChild(percentInput);
+
+        const monthLabel = utils.createElement('label', { text: 'Board Month' });
+        const monthSelect = utils.createElement('select', { attrs: { name: 'month' } });
+        futures.suggestedMonths.forEach((suggestion, index) => {
+          const option = utils.createElement('option', { text: `${suggestion.month} (${suggestion.board.toFixed(2)})`, attrs: { value: suggestion.month } });
+          if (index === 0) option.selected = true; // Default to nearest liquid month
+          monthSelect.appendChild(option);
+        });
+        monthLabel.appendChild(monthSelect);
+
+        fieldsContainer.appendChild(commodityLabel);
+        fieldsContainer.appendChild(percentContainer);
+        fieldsContainer.appendChild(monthLabel);
+      } else { // roll
+        const largestPosition = futures.positions.reduce((a, b) => a.qty > b.qty ? a : b);
+
+        const fromLabel = utils.createElement('label', { text: 'From Month' });
+        const fromSelect = utils.createElement('select', { attrs: { name: 'from' } });
+        futures.positions.forEach((position) => {
+          const option = utils.createElement('option', { text: `${position.symbol} ${position.month}`, attrs: { value: position.month, 'data-symbol': position.symbol } });
+          if (position.month === largestPosition.month) option.selected = true;
+          fromSelect.appendChild(option);
+        });
+        fromLabel.appendChild(fromSelect);
+
+        const toLabel = utils.createElement('label', { text: 'To Month' });
+        const toSelect = utils.createElement('select', { attrs: { name: 'to' } });
+        const liquidMonths = ['Nov-24', 'Dec-24', 'Jan-25', 'Mar-25', 'May-25']; // Example liquid months
+        const fromIndex = liquidMonths.indexOf(largestPosition.month);
+        if (fromIndex !== -1 && fromIndex + 1 < liquidMonths.length) {
+           liquidMonths.slice(fromIndex + 1).forEach(month => {
+             toSelect.appendChild(utils.createElement('option', { text: month, attrs: { value: month } }));
+           });
+        }
+        toLabel.appendChild(toSelect);
+
+        fieldsContainer.appendChild(fromLabel);
+        fieldsContainer.appendChild(toLabel);
       }
-      fromSelect.appendChild(utils.createElement('option', { text: `${position.month}`, attrs: { value: position.month } }));
-    });
-    ['Nov-24', 'Dec-24', 'Jan-25', 'Mar-25'].forEach((month) => {
-      toSelect.appendChild(utils.createElement('option', { text: month, attrs: { value: month } }));
-    });
+    }
+
+    function validateAndPreviewHedgeForm() {
+      const formData = new FormData(hedgeActionsForm);
+      const actionType = formData.get('actionType');
+      const submitButton = hedgeActionsForm.querySelector('button[type="submit"]');
+      const previewContainer = hedgeActionsForm.querySelector('[data-role="impact-preview"]');
+      let isValid = false;
+      let previewText = '';
+
+      if (actionType === 'hedge') {
+        const commodity = formData.get('commodity');
+        const percent = Number(formData.get('percent-display')); // Use display input for validation
+        const exposureData = data.getExposureSummary().byCommodity[commodity];
+        isValid = percent > 0 && percent <= 100 && !!commodity && !!exposureData;
+        if (isValid) {
+          const targetQty = (exposureData.physical * (percent / 100));
+          const newCoverage = (exposureData.hedged + targetQty) / exposureData.physical;
+          previewText = `Est. Target: ${targetQty.toLocaleString(undefined, { maximumFractionDigits: 0 })}. New Coverage: ${utils.formatPercent(newCoverage * 100)}.`;
+        }
+      } else { // roll
+        const from = formData.get('from');
+        const to = formData.get('to');
+        isValid = !!from && !!to && from !== to;
+        if (isValid) {
+          const mtmGain = (Math.random() * 20000) + 5000; // Simulate dynamic MTM gain
+          previewText = `Est. MTM gain: ${utils.formatCurrency(mtmGain)}.`;
+        }
+      }
+      submitButton.disabled = !isValid;
+      submitButton.textContent = actionType === 'hedge' ? 'Apply Hedge' : 'Apply Roll';
+      previewContainer.textContent = previewText;
+    }
 
     charts.mountChart('chart-hedge-ratio', {
       type: 'line',

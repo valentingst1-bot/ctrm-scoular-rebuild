@@ -65,6 +65,22 @@
     return el;
   }
 
+  function showToast(message, type = 'info') {
+    const toast = createElement('div', {
+      className: `toast toast--${type}`,
+      text: message,
+      attrs: {
+        role: 'alert',
+        'aria-live': 'assertive'
+      }
+    });
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add('toast--exiting');
+      setTimeout(() => toast.remove(), 400);
+    }, 3500);
+  }
+
   window.CTRMUtils = {
     formatMillions,
     formatCurrency,
@@ -73,5 +89,6 @@
     sumBy,
     daysBetween,
     createElement,
+    showToast,
   };
 })();
