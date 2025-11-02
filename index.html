@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scoular CTRM Experience</title>
+  <link rel="stylesheet" href="styles/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="js/utils.js" defer></script>
+  <script src="js/valuation.js" defer></script>
+  <script src="js/data.js" defer></script>
+  <script src="js/charts.js" defer></script>
+  <script src="js/routing.js" defer></script>
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary">
+      <div class="sidebar__logo">
+        <img src="assets/scoular-mark.svg" alt="Scoular" />
+      </div>
+      <nav class="sidebar__nav">
+        <a href="#/trader" class="nav-link" data-route="#/trader" title="Trader Console">
+          <span class="nav-link__label">Trader</span>
+        </a>
+        <a href="#/physical" class="nav-link" data-route="#/physical" title="Physical Trades">
+          <span class="nav-link__label">Physical</span>
+        </a>
+        <a href="#/inventory" class="nav-link" data-route="#/inventory" title="Inventory">
+          <span class="nav-link__label">Inventory</span>
+        </a>
+        <a href="#/hedge" class="nav-link" data-route="#/hedge" title="Hedge Workbench">
+          <span class="nav-link__label">Hedge</span>
+        </a>
+        <a href="#/risk" class="nav-link" data-route="#/risk" title="Risk &amp; P&amp;L">
+          <span class="nav-link__label">Risk</span>
+        </a>
+        <a href="#/intel" class="nav-link" data-route="#/intel" title="Market Intel">
+          <span class="nav-link__label">Intel</span>
+        </a>
+        <a href="#/pricing" class="nav-link" data-route="#/pricing" title="Pricing Admin">
+          <span class="nav-link__label">Pricing</span>
+        </a>
+        <a href="#/datahub" class="nav-link" data-route="#/datahub" title="Data Hub">
+          <span class="nav-link__label">Data Hub</span>
+        </a>
+      </nav>
+    </aside>
+    <main class="main">
+      <header class="main-header" role="banner">
+        <div class="main-header__row">
+          <div class="main-header__titles">
+            <h1>Scoular CTRM</h1>
+            <p>Integrated commodity trading and risk management cockpit</p>
+          </div>
+          <div class="main-header__actions" role="group" aria-label="Workspace actions">
+            <button type="button" class="ghost-button" data-action="reset-demo">Reset Demo</button>
+            <button type="button" class="ghost-button" data-action="header-recompute">Recompute</button>
+            <button type="button" class="ghost-button" data-action="toggle-compact">Toggle Compact</button>
+            <div class="snapshot-toggle" role="group" aria-label="Snapshot selector">
+              <button type="button" class="toggle-button is-active" data-snapshot="today">Live</button>
+              <button type="button" class="toggle-button" data-snapshot="monthEndAug">Month-End</button>
+            </div>
+          </div>
+        </div>
+        <section class="kpi-strip" aria-label="Key performance indicators">
+          <article class="kpi-tile" data-kpi="mtmChange">
+            <header class="kpi-tile__header">
+              <h3>MTM Δ (MM)</h3>
+              <span class="kpi-delta" data-direction="neutral">--</span>
+            </header>
+            <p class="kpi-value">--</p>
+            <canvas id="spark-mtmChange" class="kpi-spark" height="44"></canvas>
+          </article>
+          <article class="kpi-tile" data-kpi="hedgeCoverage">
+            <header class="kpi-tile__header">
+              <h3>Hedge Coverage %</h3>
+              <span class="kpi-delta" data-direction="neutral">--</span>
+            </header>
+            <p class="kpi-value">--</p>
+            <canvas id="spark-hedgeCoverage" class="kpi-spark" height="44"></canvas>
+          </article>
+          <article class="kpi-tile" data-kpi="basisPL">
+            <header class="kpi-tile__header">
+              <h3>Basis P&amp;L</h3>
+              <span class="kpi-delta" data-direction="neutral">--</span>
+            </header>
+            <p class="kpi-value">--</p>
+            <canvas id="spark-basisPL" class="kpi-spark" height="44"></canvas>
+          </article>
+          <article class="kpi-tile" data-kpi="futuresPL">
+            <header class="kpi-tile__header">
+              <h3>Futures P&amp;L</h3>
+              <span class="kpi-delta" data-direction="neutral">--</span>
+            </header>
+            <p class="kpi-value">--</p>
+            <canvas id="spark-futuresPL" class="kpi-spark" height="44"></canvas>
+          </article>
+          <article class="kpi-tile" data-kpi="freightVar">
+            <header class="kpi-tile__header">
+              <h3>Freight Var</h3>
+              <span class="kpi-delta" data-direction="neutral">--</span>
+            </header>
+            <p class="kpi-value">--</p>
+            <canvas id="spark-freightVar" class="kpi-spark" height="44"></canvas>
+          </article>
+          <article class="kpi-tile" data-kpi="otherPL">
+            <header class="kpi-tile__header">
+              <h3>Other</h3>
+              <span class="kpi-delta" data-direction="neutral">--</span>
+            </header>
+            <p class="kpi-value">--</p>
+            <canvas id="spark-otherPL" class="kpi-spark" height="44"></canvas>
+          </article>
+          <article class="kpi-tile" data-kpi="workingCapital">
+            <header class="kpi-tile__header">
+              <h3>Working Capital</h3>
+              <span class="kpi-delta" data-direction="neutral">--</span>
+            </header>
+            <p class="kpi-value">--</p>
+            <canvas id="spark-workingCapital" class="kpi-spark" height="44"></canvas>
+          </article>
+        </section>
+      </header>
+
+      <section class="view" data-route="#/trader" aria-labelledby="view-trader">
+        <h2 id="view-trader" class="view-title">Trader Console</h2>
+        <div class="view-grid trader-grid">
+          <section class="card trader-snapshot">
+            <header class="card__header">
+              <div>
+                <h3>Daily Highlights</h3>
+                <p class="card__subtitle">Snapshot of key exposures and moves</p>
+              </div>
+              <span class="timestamp" data-role="last-updated">Last updated --</span>
+            </header>
+            <div class="card__body">
+              <ul class="bullet-list" data-role="trader-bulletins"></ul>
+            </div>
+          </section>
+          <section class="card" aria-label="P&amp;L Waterfall">
+            <header class="card__header"><h3>P&amp;L Waterfall</h3></header>
+            <canvas id="chart-trader-waterfall" height="220"></canvas>
+          </section>
+          <section class="card" aria-label="Exposure Heatmap">
+            <header class="card__header"><h3>Exposure Heatmap</h3></header>
+            <canvas id="chart-trader-heatmap" height="220"></canvas>
+          </section>
+          <section class="card" aria-label="Hedge Ladder">
+            <header class="card__header"><h3>Hedge Ladder</h3></header>
+            <canvas id="chart-trader-hedge-ladder" height="220"></canvas>
+          </section>
+          <section class="card" aria-label="Top Drivers">
+            <header class="card__header"><h3>Top Drivers</h3></header>
+            <div class="card__body">
+              <ol class="drivers-list" data-role="top-drivers"></ol>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" data-route="#/physical" aria-labelledby="view-physical" hidden>
+        <div class="view-header">
+          <h2 id="view-physical" class="view-title">Physical Trades</h2>
+          <div class="filters">
+            <label>Commodity
+              <select data-filter="commodity">
+                <option value="">All</option>
+              </select>
+            </label>
+            <label>Status
+              <select data-filter="status">
+                <option value="">All</option>
+              </select>
+            </label>
+            <label>Market Zone
+              <select data-filter="zone">
+                <option value="">All</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="kpi-ribbon" data-role="physical-kpis">
+          <article class="mini-kpi" data-metric="openQty">
+            <h4>Open Qty</h4>
+            <p>--</p>
+          </article>
+          <article class="mini-kpi" data-metric="avgBasis">
+            <h4>Avg Basis</h4>
+            <p>--</p>
+          </article>
+          <article class="mini-kpi" data-metric="avgLocal">
+            <h4>Avg Local Price</h4>
+            <p>--</p>
+          </article>
+          <article class="mini-kpi" data-metric="deliveryWindow">
+            <h4>Weighted Delivery</h4>
+            <p>--</p>
+          </article>
+        </div>
+        <div class="view-grid physical-grid">
+          <section class="card physical-table">
+            <header class="card__header"><h3>Trade Book</h3></header>
+            <div class="card__body">
+              <table class="data-table" data-table="trades">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Type</th>
+                    <th>Counterparty</th>
+                    <th>Commodity</th>
+                    <th>Qty</th>
+                    <th>Price</th>
+                    <th>Delivery</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+              <p class="empty-state" hidden>No trades match your filters yet.</p>
+            </div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Status Distribution</h3></header>
+            <canvas id="chart-physical-status" height="220"></canvas>
+          </section>
+          <section class="card price-ladder" aria-label="Price Ladder">
+            <header class="card__header"><h3>Price Ladder</h3></header>
+            <div class="card__body" data-role="price-ladder">Select a trade.</div>
+          </section>
+          <aside class="detail-panel" data-role="trade-detail" aria-live="polite">
+            <header>
+              <h3>Trade Detail</h3>
+              <button type="button" class="ghost-button" data-action="copy-trade-id" hidden>Copy ID</button>
+            </header>
+            <div class="detail-body">Select a trade to view full context.</div>
+            <details class="timeline" open>
+              <summary>Lifecycle Timeline</summary>
+              <ol data-role="trade-timeline"></ol>
+            </details>
+          </aside>
+        </div>
+      </section>
+
+      <section class="view" data-route="#/inventory" aria-labelledby="view-inventory" hidden>
+        <h2 id="view-inventory" class="view-title">Inventory / Stock</h2>
+        <div class="view-grid inventory-grid">
+          <section class="card">
+            <header class="card__header"><h3>Lots by Elevator</h3></header>
+            <div class="card__body" data-role="inventory-lots"></div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Exposure by Month</h3></header>
+            <canvas id="chart-inventory-month" height="200"></canvas>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Quality Distribution</h3></header>
+            <canvas id="chart-quality" height="200"></canvas>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Aging Histogram</h3></header>
+            <canvas id="chart-aging" height="200"></canvas>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Quality Scatter</h3></header>
+            <canvas id="chart-quality-scatter" height="220"></canvas>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Capacity Utilization</h3></header>
+            <div class="card__body capacity-grid" data-role="capacity-util"></div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Open Tickets</h3></header>
+            <div class="card__body" data-role="open-tickets"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" data-route="#/hedge" aria-labelledby="view-hedge" hidden>
+        <h2 id="view-hedge" class="view-title">Hedge Workbench</h2>
+        <div class="view-grid hedge-grid">
+          <section class="card">
+            <header class="card__header"><h3>Physical Exposure</h3></header>
+            <div class="card__body" data-role="hedge-exposure"></div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Actions</h3></header>
+            <div class="card__body">
+              <form data-form="hedge-percent" class="form-inline">
+                <label>
+                  Commodity
+                  <select name="commodity"></select>
+                </label>
+                <label>
+                  Percent
+                  <input type="number" name="percent" min="1" max="100" value="25" />
+                </label>
+                <label>
+                  Month
+                  <select name="month"></select>
+                </label>
+                <button type="submit">Hedge % of position</button>
+              </form>
+              <form data-form="roll-month" class="form-inline">
+                <label>
+                  Symbol
+                  <select name="symbol"></select>
+                </label>
+                <label>
+                  From
+                  <select name="from"></select>
+                </label>
+                <label>
+                  To
+                  <select name="to"></select>
+                </label>
+                <button type="submit">Roll month</button>
+              </form>
+            </div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Hedge Ratio Over Time</h3></header>
+            <canvas id="chart-hedge-ratio" height="200"></canvas>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Term Structure</h3></header>
+            <canvas id="chart-term-structure" height="200"></canvas>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Hedge Ladder</h3></header>
+            <canvas id="chart-hedge-ladder" height="200"></canvas>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>What-if Scenario</h3></header>
+            <div class="card__body">
+              <label class="slider-label">Board Shock
+                <input type="range" min="-3" max="3" step="0.5" value="0" data-role="scenario-slider">
+              </label>
+              <div class="scenario-output" data-role="scenario-output">Adjust slider to simulate.</div>
+            </div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Hedge Actions Log</h3></header>
+            <div class="card__body">
+              <ul class="bullet-list" data-role="hedge-log"></ul>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" data-route="#/risk" aria-labelledby="view-risk" hidden>
+        <h2 id="view-risk" class="view-title">Risk &amp; P&amp;L</h2>
+        <div class="view-grid risk-grid">
+          <section class="card">
+            <header class="card__header"><h3>P&amp;L Waterfall</h3></header>
+            <canvas id="chart-waterfall" height="220"></canvas>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Variance Summary</h3></header>
+            <div class="card__body">
+              <table class="data-table" data-role="variance-summary">
+                <thead>
+                  <tr><th>Bucket</th><th>Count</th><th>Δ P&amp;L</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Variance Detail</h3></header>
+            <div class="card__body" data-role="variance-detail"></div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Carry &amp; Correlation</h3></header>
+            <div class="card__body">
+              <div class="badge" data-role="correlation-badge">Correlation --</div>
+              <p class="headline" data-role="carry-headline">--</p>
+              <canvas id="chart-carry-spark" height="120"></canvas>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" data-route="#/intel" aria-labelledby="view-intel" hidden>
+        <h2 id="view-intel" class="view-title">Market Intel</h2>
+        <div class="view-grid intel-grid">
+          <section class="card timeline-card">
+            <header class="card__header"><h3>Headlines Timeline</h3></header>
+            <div class="card__body">
+              <ul class="timeline" data-role="intel-timeline"></ul>
+            </div>
+          </section>
+          <section class="card factors-card">
+            <header class="card__header"><h3>Factor Tiles</h3></header>
+            <div class="card__body factor-grid">
+              <div class="factor" data-role="intel-vol">
+                <h4>30d Volatility</h4>
+                <canvas id="chart-intel-vol" height="120"></canvas>
+              </div>
+              <div class="factor" data-role="intel-seasonality">
+                <h4>Seasonality</h4>
+                <canvas id="chart-intel-seasonality" height="120"></canvas>
+              </div>
+              <div class="factor" data-role="intel-spread">
+                <h4>Front-month Spread</h4>
+                <canvas id="chart-intel-spread" height="120"></canvas>
+              </div>
+              <div class="factor sentiment" data-role="intel-sentiment">
+                <h4>Sentiment</h4>
+                <p class="sentiment-label">--</p>
+                <p class="sentiment-context">Awaiting signal</p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" data-route="#/pricing" aria-labelledby="view-pricing" hidden>
+        <h2 id="view-pricing" class="view-title">Pricing Admin</h2>
+        <div class="view-grid pricing-grid">
+          <section class="card">
+            <header class="card__header">
+              <h3>Price Surface</h3>
+              <button type="button" class="ghost-button" data-action="pricing-revert">Revert Surface</button>
+            </header>
+            <div class="card__body">
+              <table class="data-table price-surface" data-role="price-surface"></table>
+            </div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Pricing Points</h3></header>
+            <div class="card__body" data-role="pricing-points"></div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Zone Spreads</h3></header>
+            <div class="card__body" data-role="pricing-zones"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" data-route="#/datahub" aria-labelledby="view-datahub" hidden>
+        <h2 id="view-datahub" class="view-title">Data Hub / Admin</h2>
+        <div class="view-grid datahub-grid">
+          <section class="card">
+            <header class="card__header"><h3>Reference Data</h3></header>
+            <div class="card__body" data-role="reference-data"></div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Snapshots</h3></header>
+            <div class="card__body" data-role="snapshot-loader"></div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>System Health</h3></header>
+            <div class="card__body" data-role="system-health">
+              <ul class="bullet-list" data-role="health-list"></ul>
+              <div class="button-row">
+                <button type="button" data-action="force-render">Force Render</button>
+                <button type="button" data-action="reset-demo">Reset Demo</button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+    </main>
+    <div class="toast-stack" data-role="toast-stack" aria-live="polite" aria-atomic="true"></div>
+    <aside class="debug-drawer" data-role="debug-drawer" hidden>
+      <div class="debug-drawer__header">
+        <h3>Valuation Debug</h3>
+        <button type="button" class="debug-drawer__close" data-action="debug-close" aria-label="Close debug drawer">×</button>
+      </div>
+      <dl class="debug-drawer__stats">
+        <div><dt>Snapshot</dt><dd data-debug="snapshot">--</dd></div>
+        <div><dt>Net P&amp;L</dt><dd data-debug="net">--</dd></div>
+        <div><dt>Charts</dt><dd data-debug="charts">0</dd></div>
+        <div><dt>Last Event</dt><dd data-debug="event">--</dd></div>
+      </dl>
+      <button type="button" class="button button--ghost" data-action="debug-recompute">Recompute</button>
+    </aside>
+  </div>
+</body>
+</html>

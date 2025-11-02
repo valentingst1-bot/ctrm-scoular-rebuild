@@ -1,0 +1,12 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title">
+  <title id="title">Scoular Mark</title>
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4DA1FF" />
+      <stop offset="100%" stop-color="#0036B3" />
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="30" height="30" rx="8" fill="url(#grad)" stroke="#02174A" stroke-width="2"/>
+  <path d="M9 23c4.5-8 9.5-8 14 0" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="16" cy="13" r="4" fill="#fff" />
+</svg>
