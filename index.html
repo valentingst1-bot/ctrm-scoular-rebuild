@@ -208,27 +208,47 @@
           <section class="card">
             <header class="card__header"><h3>Actions</h3></header>
             <div class="card__body">
-              <form data-form="hedge-actions" class="actions-form">
-                <div class="form-group form-group--radios" role="radiogroup" aria-labelledby="action-type-label">
-                  <span id="action-type-label" class="form-label">Action Type</span>
-                  <label>
-                    <input type="radio" name="actionType" value="hedge" checked>
-                    Hedge % of exposure
-                  </label>
-                  <label>
-                    <input type="radio" name="actionType" value="roll">
-                    Roll month
-                  </label>
+              <form id="hedgeForm" class="hedge-form">
+                <div class="form-group" role="radiogroup" aria-labelledby="action-type-label">
+                  <span id="action-type-label" class="form-label">Action</span>
+                  <div class="form-group--radios">
+                    <label>
+                      <input type="radio" name="actionType" value="hedge" checked> Hedge % of exposure
+                    </label>
+                    <label>
+                      <input type="radio" name="actionType" value="roll"> Roll month
+                    </label>
+                  </div>
                 </div>
 
-                <div class="actions-form__fields" data-role="actions-fields">
-                  <!-- Dynamic content will be injected here -->
+                <div data-form-group="commodity">
+                  <label class="form-label" for="commoditySelect">Commodity</label>
+                  <select id="commoditySelect" name="commodity"></select>
                 </div>
 
-                <button type="submit" class="button--primary" disabled>Apply Action</button>
+                <div data-form-group="hedgeFields">
+                  <label class="form-label" for="hedgePercent">Hedge %</label>
+                  <div class="form-group--slider">
+                    <input type="range" id="hedgePercent" name="percent" min="0" max="100" value="25">
+                    <input type="number" name="percent-display" min="0" max="100" value="25" class="input--small">
+                  </div>
+                  <label class="form-label" for="boardMonth">Board Month</label>
+                  <select id="boardMonth" name="month"></select>
+                </div>
+
+                <div data-form-group="rollFields" hidden>
+                  <label class="form-label" for="fromMonth">From Month</label>
+                  <select id="fromMonth" name="from"></select>
+                  <label class="form-label" for="toMonth">To Month</label>
+                  <select id="toMonth" name="to"></select>
+                </div>
+
+                <button type="submit" class="button--primary" disabled>Apply</button>
 
                 <div class="impact-preview" data-role="impact-preview">
-                  <!-- Impact preview will be shown here -->
+                  <p><strong>Impact Preview</strong></p>
+                  <span>Δ Hedge %: --</span>
+                  <span>Δ Futures P&L: --</span>
                 </div>
               </form>
             </div>

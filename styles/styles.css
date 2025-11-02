@@ -215,12 +215,16 @@ body {
 }
 
 .inventory-grid,
-.hedge-grid,
 .risk-grid,
 .intel-grid,
 .pricing-grid,
 .datahub-grid {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.hedge-grid {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  align-items: start;
 }
 
 .card {
@@ -422,46 +426,48 @@ input:focus-visible {
 }
 
 /* New Action Form styles */
-.actions-form {
+.hedge-form {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-.form-group {
+.hedge-form .form-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.form-group--radios {
+.hedge-form .form-group--radios {
+  display: flex;
   flex-direction: row;
   gap: 1rem;
   align-items: center;
 }
 
-.form-label {
+.hedge-form .form-label {
   font-weight: 600;
   color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
-.actions-form label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.hedge-form label {
   cursor: pointer;
 }
 
-.actions-form__fields {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+.hedge-form select {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-strong);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-subtle);
 }
 
-.actions-form .form-group--slider {
+.hedge-form .form-group--slider {
   display: grid;
-  grid-template-columns: auto 1fr 60px;
+  grid-template-columns: 1fr 60px;
   align-items: center;
   gap: 0.75rem;
 }
@@ -504,6 +510,17 @@ input:focus-visible {
   color: var(--text-secondary);
   margin-top: -0.5rem;
   min-height: 1.2em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem;
+  background-color: var(--bg-surface-strong);
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+}
+
+.impact-preview p {
+  margin: 0 0 0.5rem;
 }
 
 /* Toast Notification styles */
