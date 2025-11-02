@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scoular CTRM Experience</title>
+  <link rel="stylesheet" href="styles/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="js/utils.js" defer></script>
+  <script src="js/data.js" defer></script>
+  <script src="js/charts.js" defer></script>
+  <script src="js/routing.js" defer></script>
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary">
+      <div class="sidebar__logo">
+        <img src="assets/scoular-mark.svg" alt="Scoular" />
+      </div>
+      <nav class="sidebar__nav">
+        <a href="#/trader" class="nav-link" data-route="#/trader" title="Trader Console">
+          <span class="nav-link__icon">🏠</span>
+          <span class="nav-link__label">Trader</span>
+        </a>
+        <a href="#/physical" class="nav-link" data-route="#/physical" title="Physical Trades">
+          <span class="nav-link__icon">📄</span>
+          <span class="nav-link__label">Physical</span>
+        </a>
+        <a href="#/inventory" class="nav-link" data-route="#/inventory" title="Inventory">
+          <span class="nav-link__icon">📦</span>
+          <span class="nav-link__label">Inventory</span>
+        </a>
+        <a href="#/hedge" class="nav-link" data-route="#/hedge" title="Hedge Workbench">
+          <span class="nav-link__icon">📈</span>
+          <span class="nav-link__label">Hedge</span>
+        </a>
+        <a href="#/risk" class="nav-link" data-route="#/risk" title="Risk &amp; P&amp;L">
+          <span class="nav-link__icon">🧮</span>
+          <span class="nav-link__label">Risk</span>
+        </a>
+        <a href="#/intel" class="nav-link" data-route="#/intel" title="Market Intel">
+          <span class="nav-link__icon">📰</span>
+          <span class="nav-link__label">Intel</span>
+        </a>
+        <a href="#/pricing" class="nav-link" data-route="#/pricing" title="Pricing Admin">
+          <span class="nav-link__icon">💲</span>
+          <span class="nav-link__label">Pricing</span>
+        </a>
+        <a href="#/datahub" class="nav-link" data-route="#/datahub" title="Data Hub">
+          <span class="nav-link__icon">🛠</span>
+          <span class="nav-link__label">Data Hub</span>
+        </a>
+      </nav>
+    </aside>
+    <main class="main">
+      <header class="main-header" role="banner">
+        <div class="main-header__titles">
+          <h1>Scoular CTRM</h1>
+          <p>Integrated commodity trading and risk management cockpit</p>
+        </div>
+        <div class="snapshot-toggle" role="group" aria-label="Snapshot selector">
+          <button type="button" class="toggle-button is-active" data-snapshot="today">Live</button>
+          <button type="button" class="toggle-button" data-snapshot="monthEndAug">Month-End</button>
+        </div>
+        <section class="kpi-strip" aria-label="Key performance indicators">
+          <article class="kpi-tile" data-kpi="mtmChange">
+            <h3>MTM Δ (MM)</h3>
+            <p class="kpi-value">--</p>
+          </article>
+          <article class="kpi-tile" data-kpi="hedgeCoverage">
+            <h3>Hedge Coverage %</h3>
+            <p class="kpi-value">--</p>
+          </article>
+          <article class="kpi-tile" data-kpi="basisPL">
+            <h3>Basis P&amp;L</h3>
+            <p class="kpi-value">--</p>
+          </article>
+          <article class="kpi-tile" data-kpi="futuresPL">
+            <h3>Futures P&amp;L</h3>
+            <p class="kpi-value">--</p>
+          </article>
+          <article class="kpi-tile" data-kpi="freightVar">
+            <h3>Freight Var</h3>
+            <p class="kpi-value">--</p>
+          </article>
+          <article class="kpi-tile" data-kpi="otherPL">
+            <h3>Other</h3>
+            <p class="kpi-value">--</p>
+          </article>
+          <article class="kpi-tile" data-kpi="workingCapital">
+            <h3>Working Capital</h3>
+            <p class="kpi-value">--</p>
+          </article>
+        </section>
+      </header>
+
+      <section class="view" data-route="#/trader" aria-labelledby="view-trader">
+        <h2 id="view-trader" class="view-title">Trader Console</h2>
+        <div class="view-grid trader-grid">
+          <section class="card trader-snapshot">
+            <header class="card__header">
+              <h3>Daily Highlights</h3>
+              <p class="card__subtitle">Snapshot of key exposures and moves</p>
+            </header>
+            <div class="card__body">
+              <ul class="bullet-list" data-role="trader-bulletins"></ul>
+            </div>
+          </section>
+          <section class="card" aria-label="MTM Trend">
+            <header class="card__header"><h3>MTM Trend</h3></header>
+            <canvas id="chart-mtm-trend" height="180"></canvas>
+          </section>
+          <section class="card" aria-label="Exposure by Commodity">
+            <header class="card__header"><h3>Exposure by Commodity</h3></header>
+            <canvas id="chart-exposure-commodity" height="180"></canvas>
+          </section>
+          <section class="card" aria-label="Hedge vs Physical">
+            <header class="card__header"><h3>Hedge vs Physical</h3></header>
+            <canvas id="chart-hedge-physical" height="180"></canvas>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" data-route="#/physical" aria-labelledby="view-physical" hidden>
+        <div class="view-header">
+          <h2 id="view-physical" class="view-title">Physical Trades</h2>
+          <div class="filters">
+            <label>Commodity
+              <select data-filter="commodity">
+                <option value="">All</option>
+              </select>
+            </label>
+            <label>Status
+              <select data-filter="status">
+                <option value="">All</option>
+              </select>
+            </label>
+            <label>Market Zone
+              <select data-filter="zone">
+                <option value="">All</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card__body">
+            <table class="data-table" data-table="trades">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Type</th>
+                  <th>Counterparty</th>
+                  <th>Commodity</th>
+                  <th>Qty</th>
+                  <th>Price</th>
+                  <th>Delivery</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <p class="empty-state" hidden>No trades match your filters yet.</p>
+          </div>
+        </div>
+        <aside class="detail-panel" data-role="trade-detail" aria-live="polite">
+          <header><h3>Trade Detail</h3></header>
+          <div class="detail-body">Select a trade to view full context.</div>
+        </aside>
+      </section>
+
+      <section class="view" data-route="#/inventory" aria-labelledby="view-inventory" hidden>
+        <h2 id="view-inventory" class="view-title">Inventory / Stock</h2>
+        <div class="view-grid inventory-grid">
+          <section class="card">
+            <header class="card__header"><h3>Lots by Elevator</h3></header>
+            <div class="card__body" data-role="inventory-lots"></div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Exposure by Month</h3></header>
+            <canvas id="chart-inventory-month" height="200"></canvas>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Quality Distribution</h3></header>
+            <canvas id="chart-quality" height="200"></canvas>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Aging Curve</h3></header>
+            <canvas id="chart-aging" height="200"></canvas>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Open Tickets</h3></header>
+            <div class="card__body" data-role="open-tickets"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" data-route="#/hedge" aria-labelledby="view-hedge" hidden>
+        <h2 id="view-hedge" class="view-title">Hedge Workbench</h2>
+        <div class="view-grid hedge-grid">
+          <section class="card">
+            <header class="card__header"><h3>Physical Exposure</h3></header>
+            <div class="card__body" data-role="hedge-exposure"></div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Actions</h3></header>
+            <div class="card__body">
+              <form data-form="hedge-percent" class="form-inline">
+                <label>
+                  Commodity
+                  <select name="commodity"></select>
+                </label>
+                <label>
+                  Percent
+                  <input type="number" name="percent" min="1" max="100" value="25" />
+                </label>
+                <label>
+                  Month
+                  <select name="month"></select>
+                </label>
+                <button type="submit">Hedge % of position</button>
+              </form>
+              <form data-form="roll-month" class="form-inline">
+                <label>
+                  Symbol
+                  <select name="symbol"></select>
+                </label>
+                <label>
+                  From
+                  <select name="from"></select>
+                </label>
+                <label>
+                  To
+                  <select name="to"></select>
+                </label>
+                <button type="submit">Roll month</button>
+              </form>
+            </div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Hedge Ratio Over Time</h3></header>
+            <canvas id="chart-hedge-ratio" height="200"></canvas>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>P&amp;L Sensitivity</h3></header>
+            <canvas id="chart-hedge-sensitivity" height="200"></canvas>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" data-route="#/risk" aria-labelledby="view-risk" hidden>
+        <h2 id="view-risk" class="view-title">Risk &amp; P&amp;L</h2>
+        <div class="view-grid risk-grid">
+          <section class="card">
+            <header class="card__header"><h3>P&amp;L Waterfall</h3></header>
+            <canvas id="chart-waterfall" height="220"></canvas>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Variance Activity</h3></header>
+            <div class="card__body" data-role="variance-cards"></div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Daily Carry Summary</h3></header>
+            <div class="card__body">
+              <p class="headline" data-role="carry-headline">--</p>
+              <canvas id="chart-carry-spark" height="120"></canvas>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" data-route="#/intel" aria-labelledby="view-intel" hidden>
+        <h2 id="view-intel" class="view-title">Market Intel</h2>
+        <div class="view-grid intel-grid">
+          <section class="card">
+            <header class="card__header"><h3>Headlines</h3></header>
+            <div class="card__body" data-role="intel-headlines"></div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Quant Tiles</h3></header>
+            <div class="card__body" data-role="intel-quants"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" data-route="#/pricing" aria-labelledby="view-pricing" hidden>
+        <h2 id="view-pricing" class="view-title">Pricing Admin</h2>
+        <div class="view-grid pricing-grid">
+          <section class="card">
+            <header class="card__header"><h3>Market Prices</h3></header>
+            <div class="card__body" data-role="pricing-market"></div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Pricing Points</h3></header>
+            <div class="card__body" data-role="pricing-points"></div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Zone Spreads</h3></header>
+            <div class="card__body" data-role="pricing-zones"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" data-route="#/datahub" aria-labelledby="view-datahub" hidden>
+        <h2 id="view-datahub" class="view-title">Data Hub / Admin</h2>
+        <div class="view-grid datahub-grid">
+          <section class="card">
+            <header class="card__header"><h3>Reference Data</h3></header>
+            <div class="card__body" data-role="reference-data"></div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Snapshots</h3></header>
+            <div class="card__body" data-role="snapshot-loader"></div>
+          </section>
+          <section class="card">
+            <header class="card__header"><h3>Demo Controls</h3></header>
+            <div class="card__body">
+              <button type="button" data-action="reset-demo">Reset demo</button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</body>
+</html>
