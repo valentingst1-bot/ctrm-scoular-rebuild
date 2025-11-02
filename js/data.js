@@ -589,6 +589,28 @@
     notify('snapshotUpdated', { snapshot: getSnapshot() });
   }
 
+  function getExposureByCommodity() {
+    const commodities = ['Soybeans', 'Corn', 'Wheat', 'Canola'];
+    const futures = getFutures();
+    const summary = getExposureSummary();
+
+    return commodities.map(commodity => {
+      const exposure = summary.byCommodity[commodity] || { physical: 0, hedged: 0 };
+      const physQty = exposure.physical;
+      const hedgedQty = exposure.hedged;
+      const unhedgedQty = Math.max(0, physQty - hedgedQty);
+      const relevantMonth = futures.suggestedMonths.find(m => m.commodity === commodity);
+
+      return {
+        commodity: commodity,
+        physQty: physQty,
+        hedgedQty: hedgedQty,
+        unhedgedQty: unhedgedQty,
+        avgBasis: Math.random() * 0.2 + 0.1,
+        nextMonth: relevantMonth ? relevantMonth.month : 'N/A'
+      };
+    });
+  }
   window.CTRMData = {
     subscribe,
     setSnapshot,
@@ -599,6 +621,7 @@
     getFutures,
     getPricing,
     getExposureSummary,
+    getExposureByCommodity,
     getVarianceActivity,
     getCarrySpark,
     getCarryHeadline,

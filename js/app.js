@@ -78,9 +78,8 @@
     });
   });
 
-  router.subscribe((hash) => {
-    const normalized = router.normalize(hash);
-    activateRoute(normalized);
+  router.subscribe((ctx) => {
+    activateRoute(ctx.name, ctx);
   });
 
   data.subscribe((event) => {
@@ -159,9 +158,9 @@
     });
   }
 
-  function activateRoute(route) {
+  function activateRoute(route, ctx) {
     if (activeRoute === route) {
-      renderActiveView();
+      renderActiveView(ctx);
       return;
     }
     if (activeRoute && routeHandlers[activeRoute]?.destroy) {
@@ -175,13 +174,13 @@
       const isActive = link.dataset.route === route;
       link.classList.toggle('is-active', isActive);
     });
-    renderActiveView();
+    renderActiveView(ctx);
   }
 
-  function renderActiveView() {
+  function renderActiveView(ctx) {
     const handler = routeHandlers[activeRoute];
     if (handler && handler.render) {
-      handler.render();
+      handler.render(ctx);
     }
   }
 
@@ -535,68 +534,57 @@
     submitButton.disabled = !isValid;
     submitButton.textContent = actionType === 'hedge' ? 'Apply Hedge' : 'Apply Roll';
   }
-  function renderHedge() {
-    try {
-      const hash = window.location.hash;
-      const overviewView = document.querySelector('[data-view-mode="overview"]');
-      const detailView = document.querySelector('[data-view-mode="detail"]');
+  function renderHedge(ctx) {
+    const isDetailView = ctx && ctx.params && ctx.params.commodity;
+    const overviewView = document.querySelector('[data-view-mode="overview"]');
+    const detailView = document.querySelector('[data-view-mode="detail"]');
 
-      if (hash.startsWith('#/hedge/') && hash.length > 8) {
-        // Detail view
-        overviewView.hidden = true;
-        detailView.hidden = false;
-        const commodity = hash.split('/')[2];
-        renderHedgeDetail(commodity);
-      } else {
-        // Overview view
-        overviewView.hidden = false;
-        detailView.hidden = true;
-        renderHedgeOverview();
-      }
-    } catch (error) {
-      console.error("Failed to render Hedge Workbench:", error);
-      const viewContainer = document.querySelector('[data-route="#/hedge"]');
-      viewContainer.innerHTML = '<p class="error-message">Could not load Hedge Workbench. Please check the console for details.</p>';
+    overviewView.hidden = isDetailView;
+    detailView.hidden = !isDetailView;
+
+    if (isDetailView) {
+      renderHedgeDetail(ctx.params.commodity);
+    } else {
+      renderHedgeOverview();
     }
   }
 
   function renderHedgeOverview() {
-    const exposure = data.getExposureSummary();
+    const rows = data.getExposureByCommodity();
+    charts.mountExposureBar(document.getElementById('chart-exposure-distribution'), rows);
+
     const tbody = document.querySelector('[data-table="hedge-positions"] tbody');
     tbody.innerHTML = '';
-
-    Object.entries(exposure.byCommodity).forEach(([commodity, values]) => {
-      const unhedged = values.physical - values.hedged;
-      const ratio = values.physical > 0 ? (values.hedged / values.physical) : 0;
-
-      const row = utils.createElement('tr', {
-          attrs: { 'data-commodity': commodity.toLowerCase() },
-          className: 'clickable-row'
-      });
-
-      row.innerHTML = `
-        <td>${commodity}</td>
-        <td>${values.physical.toLocaleString()}</td>
-        <td>${values.hedged.toLocaleString()}</td>
-        <td>${utils.formatPercent(ratio * 100)}</td>
-        <td>${unhedged.toLocaleString()}</td>
-        <td>${values.nextMonth}</td>
-        <td>${utils.formatCurrency(values.avgBasis, 2)}</td>
-        <td><button class="button--small" data-action="open-hedge">Open Hedge</button></td>
+    rows.forEach(row => {
+      const tr = utils.createElement('tr', { attrs: { 'data-commodity': row.commodity.toLowerCase() } });
+      const hedgePercent = row.physQty > 0 ? (row.hedgedQty / row.physQty) * 100 : 0;
+      tr.innerHTML = `
+        <td>${row.commodity}</td>
+        <td>${row.physQty.toLocaleString()}</td>
+        <td>${row.hedgedQty.toLocaleString()}</td>
+        <td>${utils.formatPercent(hedgePercent)}</td>
+        <td>${row.unhedgedQty.toLocaleString()}</td>
+        <td>${row.nextMonth}</td>
+        <td>${utils.formatCurrency(row.avgBasis, 2)}</td>
+        <td><button class="btn open-hedge" data-commodity="${row.commodity.toLowerCase()}">Open Hedge</button></td>
       `;
-      row.addEventListener('click', (e) => {
-          if (!e.target.closest('button')) {
-              router.navigate(`#/hedge/${commodity.toLowerCase()}`);
-          }
-      });
-      tbody.appendChild(row);
+      tbody.appendChild(tr);
     });
 
-    const formEl = document.getElementById('hedgeForm');
-    updateHedgeFormUI(formEl);
-    validateAndPreviewHedgeForm(formEl);
-
-    hedge.renderExposureBar();
+    const overviewContainer = document.querySelector('[data-view-mode="overview"]');
+    if (!overviewContainer.dataset.listenerAttached) {
+      overviewContainer.addEventListener('click', (event) => {
+        const target = event.target;
+        const row = target.closest('tr');
+        const button = target.closest('.open-hedge');
+        if (row || button) {
+          event.preventDefault();
+          const commodity = row ? row.dataset.commodity : button.dataset.commodity;
+          router.navigate('#/hedge/' + commodity);
+        }
+      });
+      overviewContainer.dataset.listenerAttached = 'true';
+    }
   }
 
   function renderHedgeDetail(commodity) {
