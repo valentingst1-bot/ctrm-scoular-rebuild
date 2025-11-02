@@ -3,7 +3,12 @@
 
   function normalize(hash) {
     if (!hash || hash === '#') return '#/trader';
-    return hash.startsWith('#') ? hash : `#${hash}`;
+    const a = hash.startsWith('#') ? hash : `#${hash}`;
+
+    if (a.startsWith('#/hedge/') && a.length > 8) {
+        return '#/hedge/:commodity';
+    }
+    return a;
   }
 
   function notify(hash) {
@@ -18,11 +23,10 @@
   }
 
   function navigate(hash) {
-    const target = normalize(hash);
-    if (window.location.hash !== target) {
-      window.location.hash = target;
+    if (window.location.hash !== hash) {
+      window.location.hash = hash;
     } else {
-      notify(target);
+      notify(hash);
     }
   }
 

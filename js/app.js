@@ -12,6 +12,7 @@
   const data = window.CTRMData;
   const router = window.CTRMRouting;
   const charts = window.CTRMCharts;
+  const hedge = window.CTRMHedge;
 
   const snapshotButtons = document.querySelectorAll('.snapshot-toggle .toggle-button');
   const kpiTiles = document.querySelectorAll('.kpi-tile');
@@ -43,7 +44,11 @@
     },
     '#/hedge': {
       render: renderHedge,
-      destroy: () => {}
+      destroy: hedge.destroy,
+    },
+    '#/hedge/:commodity': {
+        render: renderHedge,
+        destroy: hedge.destroy,
     },
     '#/risk': {
       render: renderRisk,
@@ -532,26 +537,76 @@
   }
   function renderHedge() {
     try {
-      const exposure = data.getExposureSummary();
-      const exposureContainer = document.querySelector('[data-role="hedge-exposure"]');
-      exposureContainer.innerHTML = '';
-      Object.entries(exposure.byCommodity).forEach(([commodity, values]) => {
-        const ratio = values.physical > 0 ? Math.round((values.hedged / values.physical) * 100) : 0;
-        const line = utils.createElement('div', {
-          className: 'detail-row',
-          html: `<strong>${commodity}</strong>: ${values.physical.toLocaleString()} phys / ${values.hedged.toLocaleString()} hedged (${ratio}%)`
-        });
-        exposureContainer.appendChild(line);
-      });
+      const hash = window.location.hash;
+      const overviewView = document.querySelector('[data-view-mode="overview"]');
+      const detailView = document.querySelector('[data-view-mode="detail"]');
 
-      const formEl = document.getElementById('hedgeForm');
-      updateHedgeFormUI(formEl);
-      validateAndPreviewHedgeForm(formEl);
+      if (hash.startsWith('#/hedge/') && hash.length > 8) {
+        // Detail view
+        overviewView.hidden = true;
+        detailView.hidden = false;
+        const commodity = hash.split('/')[2];
+        renderHedgeDetail(commodity);
+      } else {
+        // Overview view
+        overviewView.hidden = false;
+        detailView.hidden = true;
+        renderHedgeOverview();
+      }
     } catch (error) {
       console.error("Failed to render Hedge Workbench:", error);
       const viewContainer = document.querySelector('[data-route="#/hedge"]');
       viewContainer.innerHTML = '<p class="error-message">Could not load Hedge Workbench. Please check the console for details.</p>';
     }
+  }
+
+  function renderHedgeOverview() {
+    const exposure = data.getExposureSummary();
+    const tbody = document.querySelector('[data-table="hedge-positions"] tbody');
+    tbody.innerHTML = '';
+
+    Object.entries(exposure.byCommodity).forEach(([commodity, values]) => {
+      const unhedged = values.physical - values.hedged;
+      const ratio = values.physical > 0 ? (values.hedged / values.physical) : 0;
+
+      const row = utils.createElement('tr', {
+          attrs: { 'data-commodity': commodity.toLowerCase() },
+          className: 'clickable-row'
+      });
+
+      row.innerHTML = `
+        <td>${commodity}</td>
+        <td>${values.physical.toLocaleString()}</td>
+        <td>${values.hedged.toLocaleString()}</td>
+        <td>${utils.formatPercent(ratio * 100)}</td>
+        <td>${unhedged.toLocaleString()}</td>
+        <td>${values.nextMonth}</td>
+        <td>${utils.formatCurrency(values.avgBasis, 2)}</td>
+        <td><button class="button--small" data-action="open-hedge">Open Hedge</button></td>
+      `;
+      row.addEventListener('click', (e) => {
+          if (!e.target.closest('button')) {
+              router.navigate(`#/hedge/${commodity.toLowerCase()}`);
+          }
+      });
+      tbody.appendChild(row);
+    });
+
+    const formEl = document.getElementById('hedgeForm');
+    updateHedgeFormUI(formEl);
+    validateAndPreviewHedgeForm(formEl);
+
+    hedge.renderExposureBar();
+  }
+
+  function renderHedgeDetail(commodity) {
+    const detailView = document.querySelector('[data-view-mode="detail"]');
+    detailView.innerHTML = `
+        <div class="card full-width">
+            <h2>${commodity.charAt(0).toUpperCase() + commodity.slice(1)} Hedge Detail</h2>
+            <p>Details about the ${commodity} hedge will be displayed here.</p>
+        </div>
+    `;
   }
 
   function renderRisk() {

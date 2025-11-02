@@ -81,6 +81,18 @@
     }, 3500);
   }
 
+  const COMMODITY_COLORS = {
+    Soybeans: '#004bff',
+    Corn: '#1ab76c',
+    Wheat: '#ffc842',
+    Canola: '#8a5aff',
+    Other: '#cccccc',
+  };
+
+  function getCommodityColor(commodity) {
+    return COMMODITY_COLORS[commodity] || COMMODITY_COLORS.Other;
+  }
+
   window.CTRMUtils = {
     formatMillions,
     formatCurrency,
@@ -90,5 +102,6 @@
     daysBetween,
     createElement,
     showToast,
+    getCommodityColor,
   };
 })();
