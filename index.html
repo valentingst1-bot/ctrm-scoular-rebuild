@@ -208,35 +208,28 @@
           <section class="card">
             <header class="card__header"><h3>Actions</h3></header>
             <div class="card__body">
-              <form data-form="hedge-percent" class="form-inline">
-                <label>
-                  Commodity
-                  <select name="commodity"></select>
-                </label>
-                <label>
-                  Percent
-                  <input type="number" name="percent" min="1" max="100" value="25" />
-                </label>
-                <label>
-                  Month
-                  <select name="month"></select>
-                </label>
-                <button type="submit">Hedge % of position</button>
-              </form>
-              <form data-form="roll-month" class="form-inline">
-                <label>
-                  Symbol
-                  <select name="symbol"></select>
-                </label>
-                <label>
-                  From
-                  <select name="from"></select>
-                </label>
-                <label>
-                  To
-                  <select name="to"></select>
-                </label>
-                <button type="submit">Roll month</button>
+              <form data-form="hedge-actions" class="actions-form">
+                <div class="form-group form-group--radios" role="radiogroup" aria-labelledby="action-type-label">
+                  <span id="action-type-label" class="form-label">Action Type</span>
+                  <label>
+                    <input type="radio" name="actionType" value="hedge" checked>
+                    Hedge % of exposure
+                  </label>
+                  <label>
+                    <input type="radio" name="actionType" value="roll">
+                    Roll month
+                  </label>
+                </div>
+
+                <div class="actions-form__fields" data-role="actions-fields">
+                  <!-- Dynamic content will be injected here -->
+                </div>
+
+                <button type="submit" class="button--primary" disabled>Apply Action</button>
+
+                <div class="impact-preview" data-role="impact-preview">
+                  <!-- Impact preview will be shown here -->
+                </div>
               </form>
             </div>
           </section>
