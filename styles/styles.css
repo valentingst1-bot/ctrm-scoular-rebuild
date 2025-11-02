@@ -83,10 +83,7 @@ body {
   text-decoration: none;
   font-weight: 500;
   transition: background 0.2s ease, transform 0.2s ease;
-}
-
-.nav-link__icon {
-  font-size: 1.2rem;
+  border-left: 4px solid transparent;
 }
 
 .nav-link:focus-visible {
@@ -102,6 +99,7 @@ body {
 .nav-link.is-active {
   background: rgba(255, 255, 255, 0.24);
   color: #fff;
+  border-left-color: var(--accent);
 }
 
 .main {
@@ -237,9 +235,21 @@ body {
   flex-direction: column;
 }
 
+.card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .card__header h3 {
   margin: 0;
   font-size: 1.05rem;
+}
+
+.chart-caption {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
 }
 
 .card__subtitle {

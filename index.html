@@ -23,35 +23,27 @@
       </div>
       <nav class="sidebar__nav">
         <a href="#/trader" class="nav-link" data-route="#/trader" title="Trader Console">
-          <span class="nav-link__icon">🏠</span>
           <span class="nav-link__label">Trader</span>
         </a>
         <a href="#/physical" class="nav-link" data-route="#/physical" title="Physical Trades">
-          <span class="nav-link__icon">📄</span>
           <span class="nav-link__label">Physical</span>
         </a>
         <a href="#/inventory" class="nav-link" data-route="#/inventory" title="Inventory">
-          <span class="nav-link__icon">📦</span>
           <span class="nav-link__label">Inventory</span>
         </a>
         <a href="#/hedge" class="nav-link" data-route="#/hedge" title="Hedge Workbench">
-          <span class="nav-link__icon">📈</span>
           <span class="nav-link__label">Hedge</span>
         </a>
         <a href="#/risk" class="nav-link" data-route="#/risk" title="Risk &amp; P&amp;L">
-          <span class="nav-link__icon">🧮</span>
           <span class="nav-link__label">Risk</span>
         </a>
         <a href="#/intel" class="nav-link" data-route="#/intel" title="Market Intel">
-          <span class="nav-link__icon">📰</span>
           <span class="nav-link__label">Intel</span>
         </a>
         <a href="#/pricing" class="nav-link" data-route="#/pricing" title="Pricing Admin">
-          <span class="nav-link__icon">💲</span>
           <span class="nav-link__label">Pricing</span>
         </a>
         <a href="#/datahub" class="nav-link" data-route="#/datahub" title="Data Hub">
-          <span class="nav-link__icon">🛠</span>
           <span class="nav-link__label">Data Hub</span>
         </a>
       </nav>
@@ -232,6 +224,7 @@
                     <input type="range" id="hedgePercent" name="percent" min="0" max="100" value="25">
                     <input type="number" name="percent-display" min="0" max="100" value="25" class="input--small">
                   </div>
+                  <p class="helper-text">Targets % of current unhedged exposure.</p>
                   <label class="form-label" for="boardMonth">Board Month</label>
                   <select id="boardMonth" name="month"></select>
                 </div>
@@ -252,14 +245,6 @@
                 </div>
               </form>
             </div>
-          </section>
-          <section class="card">
-            <header class="card__header"><h3>Hedge Ratio Over Time</h3></header>
-            <canvas id="chart-hedge-ratio" height="200"></canvas>
-          </section>
-          <section class="card">
-            <header class="card__header"><h3>P&amp;L Sensitivity</h3></header>
-            <canvas id="chart-hedge-sensitivity" height="200"></canvas>
           </section>
         </div>
       </section>

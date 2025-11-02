@@ -43,10 +43,7 @@
     },
     '#/hedge': {
       render: renderHedge,
-      destroy: () => {
-        charts.destroyChart('chart-hedge-ratio');
-        charts.destroyChart('chart-hedge-sensitivity');
-      }
+      destroy: () => {}
     },
     '#/risk': {
       render: renderRisk,
@@ -91,6 +88,7 @@
     }
   });
 
+  document.addEventListener('ctrm:dataChanged', renderHedge);
   document.addEventListener('click', (event) => {
     const matchBtn = event.target.closest('[data-action="match-ticket"]');
     if (matchBtn) {
@@ -152,7 +150,6 @@
         data.rollMonth({ symbol, from, to });
         utils.showToast(`Rolled ${symbol} from ${from} to ${to}`);
       }
-
       document.dispatchEvent(new CustomEvent('ctrm:dataChanged'));
     });
   }
@@ -540,7 +537,10 @@
       exposureContainer.innerHTML = '';
       Object.entries(exposure.byCommodity).forEach(([commodity, values]) => {
         const ratio = values.physical > 0 ? Math.round((values.hedged / values.physical) * 100) : 0;
-        const line = utils.createElement('div', { html: `<strong>${commodity}</strong> · ${values.physical.toLocaleString()} phys / ${values.hedged.toLocaleString()} hedged → ${ratio}%` });
+        const line = utils.createElement('div', {
+          className: 'detail-row',
+          html: `<strong>${commodity}</strong>: ${values.physical.toLocaleString()} phys / ${values.hedged.toLocaleString()} hedged (${ratio}%)`
+        });
         exposureContainer.appendChild(line);
       });
 
@@ -552,26 +552,6 @@
       const viewContainer = document.querySelector('[data-route="#/hedge"]');
       viewContainer.innerHTML = '<p class="error-message">Could not load Hedge Workbench. Please check the console for details.</p>';
     }
-
-    const futures = getFuturesSafe();
-
-    charts.mountChart('chart-hedge-ratio', {
-      type: 'line',
-      data: {
-        labels: futures.hedgeMonths,
-        datasets: [{ data: futures.hedgeRatioHistory, borderColor: '#004bff', fill: false, tension: 0.35 }]
-      },
-      options: { plugins: { legend: { display: false } } }
-    });
-
-    charts.mountChart('chart-hedge-sensitivity', {
-      type: 'bar',
-      data: {
-        labels: ['-3%', '-2%', '-1%', 'Flat', '+1%', '+2%', '+3%'],
-        datasets: [{ data: futures.pnlSensitivity, backgroundColor: futures.pnlSensitivity.map((v) => v >= 0 ? '#1ab76c' : '#e03e3e') }]
-      },
-      options: { plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } } } }
-    });
   }
 
   function renderRisk() {
