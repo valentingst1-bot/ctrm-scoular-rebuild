@@ -1,24 +1,31 @@
 (function () {
   const listeners = new Set();
+  const routes = [
+    { pattern: /#\/hedge\/(\w+)/, name: '#/hedge/:commodity' }
+  ];
 
-  function normalize(hash) {
-    if (!hash || hash === '#') return '#/trader';
-    const a = hash.startsWith('#') ? hash : `#${hash}`;
-
-    if (a.startsWith('#/hedge/') && a.length > 8) {
-        return '#/hedge/:commodity';
+  function resolve(hash) {
+    for (const route of routes) {
+      const match = hash.match(route.pattern);
+      if (match) {
+        return {
+          name: route.name,
+          params: { commodity: match[1] },
+          hash: hash
+        };
+      }
     }
-    return a;
+    return { name: hash, params: {}, hash: hash };
   }
 
   function notify(hash) {
-    const normalized = normalize(hash);
-    listeners.forEach((handler) => handler(normalized));
+    const context = resolve(hash);
+    listeners.forEach((handler) => handler(context));
   }
 
   function subscribe(handler) {
     listeners.add(handler);
-    handler(normalize(window.location.hash));
+    handler(resolve(window.location.hash || '#/trader'));
     return () => listeners.delete(handler);
   }
 
@@ -35,6 +42,5 @@
   window.CTRMRouting = {
     subscribe,
     navigate,
-    normalize,
   };
 })();
