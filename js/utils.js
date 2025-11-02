@@ -7,19 +7,12 @@
   const currencyFormatter = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
   });
 
   const percentFormatter = new Intl.NumberFormat('en-US', {
     style: 'percent',
     maximumFractionDigits: 1,
-  });
-
-  const decimalFormatter = new Intl.NumberFormat('en-US', {
-    style: 'decimal',
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 0,
   });
 
   function formatMillions(value) {
@@ -35,24 +28,6 @@
   function formatPercent(value) {
     if (typeof value !== 'number') return '--';
     return percentFormatter.format(value / 100);
-  }
-
-  function formatNumber(value, digits = 2) {
-    if (typeof value !== 'number') return '--';
-    return Number(value.toFixed(digits)).toString();
-  }
-
-  function formatDelta(value, options = {}) {
-    if (typeof value !== 'number' || Number.isNaN(value)) return '0';
-    const sign = value > 0 ? '+' : value < 0 ? '−' : '';
-    const magnitude = Math.abs(value);
-    if (options.unit === 'percent') {
-      return `${sign}${decimalFormatter.format(magnitude)}%`;
-    }
-    if (options.unit === 'mm') {
-      return `${sign}${decimalFormatter.format(magnitude)} MM`;
-    }
-    return `${sign}${decimalFormatter.format(magnitude)}`;
   }
 
   function groupBy(list, key) {
@@ -94,8 +69,6 @@
     formatMillions,
     formatCurrency,
     formatPercent,
-    formatNumber,
-    formatDelta,
     groupBy,
     sumBy,
     daysBetween,

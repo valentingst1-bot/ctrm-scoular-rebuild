@@ -67,9 +67,6 @@
         workingCapital: 0,
       },
       exposures: {},
-      heatmap: [],
-      hedgeLadder: [],
-      topDrivers: [],
       inventory: {
         byMonth: [],
         byQuality: [],
@@ -101,8 +98,6 @@
     const monthExposure = new Map();
     const qualityBuckets = new Map();
     const agingBuckets = new Map();
-    const heatmapBuckets = new Map();
-    const ladderBuckets = new Map();
 
     state.trades.forEach((trade) => {
       const pricing = getPricing(state, trade.commodity, trade.marketMonth, trade.pricingPoint, trade.marketZone);
@@ -127,24 +122,6 @@
 
       trade.currentLocalPrice = pricing.local;
       trade.flatPrice = pricing.local + (trade.basis || 0);
-
-      const commodityKey = `${trade.commodity}|${trade.marketMonth}`;
-      const heatEntry = heatmapBuckets.get(commodityKey) || {
-        commodity: trade.commodity,
-        month: trade.marketMonth,
-        physical: 0,
-        hedged: 0,
-      };
-      heatEntry.physical += sign * baseQty;
-      heatmapBuckets.set(commodityKey, heatEntry);
-
-      const ladderEntry = ladderBuckets.get(trade.marketMonth) || {
-        month: trade.marketMonth,
-        physical: 0,
-        hedged: 0,
-      };
-      ladderEntry.physical += sign * baseQty;
-      ladderBuckets.set(trade.marketMonth, ladderEntry);
     });
 
     state.inventoryLots.forEach((lot) => {
@@ -173,25 +150,6 @@
 
       const bucket = ensureCommodityBucket(exposures, commodity);
       bucket.hedged += -position.qty * multiplier;
-
-      const monthKey = position.month;
-      const commodityKey = `${commodity}|${monthKey}`;
-      const heatEntry = heatmapBuckets.get(commodityKey) || {
-        commodity,
-        month: monthKey,
-        physical: 0,
-        hedged: 0,
-      };
-      heatEntry.hedged += -position.qty * multiplier;
-      heatmapBuckets.set(commodityKey, heatEntry);
-
-      const ladderEntry = ladderBuckets.get(monthKey) || {
-        month: monthKey,
-        physical: 0,
-        hedged: 0,
-      };
-      ladderEntry.hedged += -position.qty * multiplier;
-      ladderBuckets.set(monthKey, ladderEntry);
     });
 
     futuresValue += state.adjustments?.futuresRealized || 0;
@@ -224,37 +182,6 @@
       byAging: Array.from(agingBuckets.entries()).map(([label, value]) => ({ label, value })),
     };
 
-    const heatmap = Array.from(heatmapBuckets.values()).map((entry) => ({
-      commodity: entry.commodity,
-      month: entry.month,
-      physical: entry.physical,
-      hedged: entry.hedged,
-      unhedged: entry.physical + entry.hedged,
-    }));
-
-    const hedgeLadder = Array.from(ladderBuckets.values())
-      .sort((a, b) => MONTH_SEQUENCE.indexOf(a.month.split('-')[0]) - MONTH_SEQUENCE.indexOf(b.month.split('-')[0]))
-      .map((entry) => ({
-        month: entry.month,
-        physical: entry.physical,
-        hedged: entry.hedged,
-        unhedged: entry.physical + entry.hedged,
-      }));
-
-    const driverSource = [
-      { label: 'Basis P&L', value: aggregates.basisPL },
-      { label: 'Futures P&L', value: aggregates.futuresPL },
-      { label: 'Freight Var', value: aggregates.freightVar },
-      { label: 'Other', value: aggregates.otherPL },
-      { label: 'Working Capital', value: aggregates.workingCapital },
-    ];
-
-    const topDrivers = driverSource
-      .map((driver) => ({ ...driver, abs: Math.abs(driver.value) }))
-      .sort((a, b) => b.abs - a.abs)
-      .slice(0, 4)
-      .map(({ abs, ...rest }) => rest);
-
     const mtmSeries = MONTH_SEQUENCE.slice(0, 6).map((label, index) => ({
       label,
       value: Number((aggregates.netPL - 0.6 + index * 0.25).toFixed(2)),
@@ -264,9 +191,6 @@
       timestamp,
       aggregates,
       exposures,
-      heatmap,
-      hedgeLadder,
-      topDrivers,
       inventory,
       mtmSeries,
     };
@@ -302,18 +226,6 @@
 
   ValuationEngine.prototype.getInventoryBreakdown = function getInventoryBreakdown() {
     return this.lastResult.inventory;
-  };
-
-  ValuationEngine.prototype.getHeatmap = function getHeatmap() {
-    return this.lastResult.heatmap;
-  };
-
-  ValuationEngine.prototype.getHedgeLadder = function getHedgeLadder() {
-    return this.lastResult.hedgeLadder;
-  };
-
-  ValuationEngine.prototype.getTopDrivers = function getTopDrivers() {
-    return this.lastResult.topDrivers;
   };
 
   window.CTRMValuationEngine = {
