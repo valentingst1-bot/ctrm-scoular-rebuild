@@ -6,15 +6,14 @@ A single-page vanilla HTML/CSS/JS experience that simulates the core workflows o
 
 - **Hash-based routing** across Trader, Physical, Inventory, Hedge, Risk, Intel, Pricing, and Data Hub workspaces.
 - **Live vs. Month-end snapshot toggle** that instantly rebinds KPIs and charts to different datasets.
-- **Interactive dashboards** with mini cards, Chart.js visualizations, and a terminal-inspired UI polish.
+- **Interactive dashboards** with mini cards, Chart.js visualizations, and Apple-inspired UI styling.
 - **Physical trade management** with filtering, rich detail panel, and in-line pricing stack.
 - **Inventory cockpit** showing lot health, exposure charts, and actionable open ticket matching.
-- **Deterministic valuation engine** driving MTM, basis, futures, freight, and hedge coverage metrics.
-- **Hedge workbench** to simulate hedging percentages, rolls, and their impact on KPIs and ratios in real time.
-- **Risk and P&L analytics** including waterfall view, variance cards, and carry sparkline synced to valuation outputs.
+- **Hedge workbench** to simulate hedging percentages, rolls, and their impact on KPIs and ratios.
+- **Risk and P&L analytics** including waterfall view, variance cards, and carry sparkline.
 - **Market intel digest** with qualitative headlines and quantitative signals.
-- **Pricing administration** mock forms for month-end mark maintenance with instant recalculation.
-- **Data hub and observability** tools including snapshot loaders, reset controls, toast notifications, and a debug drawer (`#debug=1`).
+- **Pricing administration** mock forms for month-end mark maintenance.
+- **Data hub** for reference data inspection and demo reset controls.
 
 ## Getting started
 

@@ -26,6 +26,5 @@
     mountChart,
     destroyChart,
     destroyAll,
-    count: () => registry.size,
   };
 })();
