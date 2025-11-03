@@ -160,7 +160,6 @@
   }
 
   function activateRoute(route, ctx) {
-    console.debug('[Route]', route, ctx.params);
     const handler = routeHandlers[route];
     const viewRoute = handler?.view || route;
 
@@ -547,17 +546,15 @@
     submitButton.textContent = actionType === 'hedge' ? 'Apply Hedge' : 'Apply Roll';
   }
   function renderHedge(ctx) {
-    const commodity = ctx.params.commodity;
+    const isDetailView = ctx && ctx.params && ctx.params.commodity;
     const overviewView = document.querySelector('[data-view-mode="overview"]');
     const detailView = document.querySelector('[data-view-mode="detail"]');
 
-    const showDetail = !!commodity;
+    overviewView.hidden = isDetailView;
+    detailView.hidden = !isDetailView;
 
-    overviewView.hidden = showDetail;
-    detailView.hidden = !showDetail;
-
-    if (showDetail) {
-      renderHedgeDetail(commodity);
+    if (isDetailView) {
+      renderHedgeDetail(ctx.params.commodity);
     } else {
       renderHedgeOverview();
     }
@@ -607,21 +604,8 @@
 
   function renderHedgeDetail(commodity) {
     const detailView = document.querySelector('[data-view-mode="detail"]');
-    const headerData = data.getHedgeDetailHeader(commodity);
-
-    if (!headerData) {
-        console.warn('[Hedge] No detail to render for commodity:', commodity);
-        detailView.innerHTML = `
-            <div class="card full-width">
-                <h2>Commodity Not Found</h2>
-                <p>No hedge data is available for "${commodity}". Please return to the overview.</p>
-                <a href="#/hedge" class="btn">Back to Overview</a>
-            </div>
-        `;
-        return;
-    }
-
     const commodityTitle = commodity.charAt(0).toUpperCase() + commodity.slice(1);
+
     detailView.innerHTML = `
       <div class="detail-header" id="hedge-detail-header">
         <a href="#/hedge" class="back-link">&larr; Back to Overview</a>

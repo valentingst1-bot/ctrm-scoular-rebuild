@@ -4,50 +4,40 @@
     { pattern: /#\/hedge\/(\w+)/, name: '#/hedge/:commodity' }
   ];
 
-  function parseQueryString(str) {
-    return (str || '').split('&').reduce((acc, pair) => {
-      const [key, value] = pair.split('=');
-      if (key) acc[decodeURIComponent(key)] = decodeURIComponent(value || '');
-      return acc;
-    }, {});
-  }
-
-  function resolve(hash, search) {
-    const queryParams = parseQueryString(search.substring(1));
+  function resolve(hash) {
     for (const route of routes) {
       const match = hash.match(route.pattern);
       if (match) {
         return {
           name: route.name,
-          params: { ...queryParams, commodity: match[1] },
+          params: { commodity: match[1] },
           hash: hash
         };
       }
     }
-    return { name: hash, params: queryParams, hash: hash };
+    return { name: hash, params: {}, hash: hash };
   }
 
-  function notify() {
-    const context = resolve(window.location.hash, window.location.search);
+  function notify(hash) {
+    const context = resolve(hash);
     listeners.forEach((handler) => handler(context));
   }
 
   function subscribe(handler) {
     listeners.add(handler);
-    handler(resolve(window.location.hash || '#/trader', window.location.search));
+    handler(resolve(window.location.hash || '#/trader'));
     return () => listeners.delete(handler);
   }
 
-  function navigate(path) {
-    const [hash, search] = path.split('?');
-    if (window.location.hash !== hash || window.location.search !== (search ? `?${search}` : '')) {
-      window.location = path;
+  function navigate(hash) {
+    if (window.location.hash !== hash) {
+      window.location.hash = hash;
     } else {
-      notify();
+      notify(hash);
     }
   }
 
-  window.addEventListener('hashchange', () => notify());
+  window.addEventListener('hashchange', () => notify(window.location.hash));
 
   window.CTRMRouting = {
     subscribe,
