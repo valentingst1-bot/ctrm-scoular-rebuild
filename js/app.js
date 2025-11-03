@@ -641,6 +641,8 @@
         <td>${avgBasis}</td>
         <td><button class="btn open-hedge" data-commodity-slug="${commoditySlug}">Open Hedge</button></td>
       `;
+      tbody.appendChild(tr);
+    });
 
     if (!hedgeOverviewContainer.dataset.listenerAttached) {
       hedgeOverviewContainer.addEventListener('click', (event) => {
