@@ -552,11 +552,24 @@
 
   function hedgeExposure({ commodity, percent, month }) {
     const deltaCoverage = Number(percent) / 4;
+    const pnlDelta = Math.random() * -20000;
     updateKpiAdjustment('hedgeCoverage', deltaCoverage);
     updateKpiAdjustment('mtmChange', percent * 0.02);
+    updateKpiAdjustment('futuresPL', pnlDelta / 1000000);
+
     const entry = exposures.byCommodity[commodity] || (exposures.byCommodity[commodity] = { physical: 0, hedged: 0 });
     const additional = Math.round(entry.physical * (Number(percent) / 100));
     entry.hedged += additional;
+
+    actionsLog.push({
+        ts: new Date().toISOString(),
+        type: 'hedge',
+        commodity,
+        month,
+        value: `${percent}%`,
+        pnlDelta
+    });
+
     recordHedgePoint(month || 'Hedge');
     exposures.pnlSensitivity = exposures.pnlSensitivity.map((value, idx) => value + (idx - 3) * 0.1);
     notify('hedgeUpdated', { commodity, percent });
@@ -566,10 +579,22 @@
   function rollMonth({ symbol, from, to }) {
     const position = futuresPositions.find((pos) => pos.symbol === symbol && pos.month === from);
     if (!position) return;
+
+    const pnlDelta = (Math.random() * 20000) + 5000;
     position.month = to;
     position.avgPrice += 0.08;
-    updateKpiAdjustment('futuresPL', 0.4);
+    updateKpiAdjustment('futuresPL', pnlDelta / 1000000);
     updateKpiAdjustment('mtmChange', 0.2);
+
+    actionsLog.push({
+        ts: new Date().toISOString(),
+        type: 'roll',
+        commodity: 'N/A', // Symbol would need mapping
+        month: `${from} -> ${to}`,
+        value: position.qty,
+        pnlDelta
+    });
+
     recordHedgePoint(to);
     notify('futuresRolled', { symbol, from, to });
     notify('snapshotUpdated', { snapshot: getSnapshot() });
@@ -606,12 +631,124 @@
         physQty: physQty,
         hedgedQty: hedgedQty,
         unhedgedQty: unhedgedQty,
-        avgBasis: 0.28,
+        avgBasis: Math.random() * 0.2 + 0.1,
         nextMonth: relevantMonth ? relevantMonth.month : 'N/A'
       };
     });
   }
 
+  function getHedgeDetailHeader(commodity) {
+    const summary = getExposureSummary().byCommodity[commodity];
+    if (!summary) return null;
+
+    const hedgePercent = summary.physical > 0 ? (summary.hedged / summary.physical) * 100 : 0;
+    return {
+      physQty: summary.physical,
+      hedgedQty: summary.hedged,
+      hedgePercent: hedgePercent,
+      unhedgedQty: Math.max(0, summary.physical - summary.hedged),
+      mtm: (Math.random() * 2 - 1) * 500000,
+      basisPL: (Math.random() * 2 - 1) * 300000,
+      futuresPL: (Math.random() * 2 - 1) * 200000,
+    };
+  }
+
+  function getForwardCurve(commodity) {
+    const months = ['Nov-24', 'Jan-25', 'Mar-25', 'May-25', 'Jul-25', 'Sep-25'];
+    let startPrice = 13.50;
+    if (commodity === 'Corn') startPrice = 5.20;
+    if (commodity === 'Wheat') startPrice = 7.80;
+    if (commodity === 'Canola') startPrice = 710;
+
+    return months.map((month, i) => ({
+      month,
+      price: startPrice + (i * 0.15) + (Math.random() - 0.5) * 0.1,
+    }));
+  }
+
+  function getExposureByMonth(commodity) {
+      const summary = getExposureSummary().byCommodity[commodity];
+      if (!summary) return [];
+      const months = ['Sep-24', 'Oct-24', 'Nov-24', 'Dec-24', 'Jan-25'];
+      const totalPhys = summary.physical;
+      const totalHedged = summary.hedged;
+
+      return months.map((month, i) => {
+          const physical = totalPhys / months.length * (1 - i*0.1 + Math.random()*0.1);
+          const hedged = totalHedged / months.length * (1 - i*0.05 + Math.random()*0.05);
+          return {
+              month,
+              physical: Math.round(physical),
+              hedged: Math.round(hedged),
+          };
+      });
+  }
+
+  function getBasisHistory(commodity) {
+      const zones = ['Prairie North', 'Gulf Export', 'Mississippi River'];
+      const history = {};
+      const months = ['2024-03-01', '2024-04-01', '2024-05-01', '2024-06-01', '2024-07-01', '2024-08-01', '2024-09-01'];
+      zones.forEach((zone, i) => {
+          history[zone] = [];
+          let basis = 0.20 - i*0.05;
+          months.forEach(month => {
+              basis += (Math.random() - 0.5) * 0.05;
+              history[zone].push({ date: month, basis: basis });
+          });
+      });
+      return history;
+  }
+
+  function getPriceStack(commodity) {
+      const months = ['Jun-24', 'Jul-24', 'Aug-24', 'Sep-24'];
+      let board = 13.20;
+       if (commodity === 'Corn') board = 5.10;
+       if (commodity === 'Wheat') board = 7.60;
+
+      return months.map(month => {
+          board += (Math.random() - 0.4) * 0.1;
+          const point = (Math.random() * 0.1) + 0.2;
+          const zone = (Math.random() * 0.1) + 0.15;
+          return {
+              month,
+              board: board,
+              point: point,
+              zone: zone,
+              local: board + point + zone,
+          }
+      })
+  }
+
+  function getVolAndCorr(commodity) {
+      return {
+          volatility: (Math.random() * 15 + 15).toFixed(1) + '%',
+          correlation: (Math.random() * 0.4 + 0.3).toFixed(2),
+      };
+  }
+
+  const actionsLog = [];
+
+  function getActionsLog(commodity) {
+      return actionsLog.filter(a => a.commodity === commodity).slice(-10);
+  }
+
+  function simulateShock({ commodity, boardPct, basisCents }) {
+    const summary = getExposureSummary().byCommodity[commodity];
+    if (!summary) return { futuresDelta: 0, basisDelta: 0, netDelta: 0 };
+
+    const unhedged = Math.max(0, summary.physical - summary.hedged);
+    const hedged = summary.hedged;
+
+    const boardPrice = getForwardCurve(commodity)[0].price;
+    const futuresDelta = hedged * (boardPrice * (boardPct / 100));
+    const basisDelta = summary.physical * (basisCents / 100);
+
+    return {
+      futuresDelta,
+      basisDelta,
+      netDelta: futuresDelta + basisDelta
+    };
+  }
   window.CTRMData = {
     subscribe,
     setSnapshot,
@@ -623,6 +760,14 @@
     getPricing,
     getExposureSummary,
     getExposureByCommodity,
+    getHedgeDetailHeader,
+    getForwardCurve,
+    getExposureByMonth,
+    getBasisHistory,
+    getPriceStack,
+    getVolAndCorr,
+    getActionsLog,
+    simulateShock,
     getVarianceActivity,
     getCarrySpark,
     getCarryHeadline,
