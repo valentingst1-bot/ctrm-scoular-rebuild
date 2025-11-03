@@ -607,12 +607,12 @@
     const commodityTitle = commodity.charAt(0).toUpperCase() + commodity.slice(1);
 
     detailView.innerHTML = `
-      <div class="detail-header">
+      <div class="detail-header" id="hedge-detail-header">
         <a href="#/hedge" class="back-link">&larr; Back to Overview</a>
         <div class="detail-header__main">
           <h2>${commodityTitle} Hedge Detail</h2>
         </div>
-        <div class="kpi-strip kpi-strip--mini" data-role="detail-kpis">
+        <div class="kpi-strip kpi-strip--mini">
           <article class="kpi-tile kpi-tile--mini"><h3>Physical</h3><p data-kpi="physQty">--</p></article>
           <article class="kpi-tile kpi-tile--mini"><h3>Hedged</h3><p data-kpi="hedgedQty">--</p></article>
           <article class="kpi-tile kpi-tile--mini"><h3>Hedge %</h3><p data-kpi="hedgePercent">--</p></article>
@@ -623,7 +623,7 @@
         </div>
       </div>
       <div class="view-grid hedge-detail-grid">
-        <div class="card" data-role="action-ticket-container">
+        <div class="card" id="hedge-ticket">
           <header class="card__header"><h3>Action Ticket</h3></header>
           <div class="card__body">
             <form id="hedgeFormDetail" class="hedge-form">
@@ -663,123 +663,83 @@
           </div>
         </div>
         <div class="hedge-detail-analytics-grid">
-          <div class="card">
-            <header class="card__header"><h3>Forward Curve</h3></header>
-            <div class="card__body"><canvas id="chart-forward-curve" height="200"></canvas></div>
-          </div>
-          <div class="card">
-            <header class="card__header"><h3>Exposure Ladder</h3></header>
-            <div class="card__body"><canvas id="chart-exposure-ladder" height="200"></canvas></div>
-          </div>
-          <div class="card">
-            <header class="card__header"><h3>Basis History</h3></header>
-            <div class="card__body"><canvas id="chart-basis-history" height="200"></canvas></div>
-          </div>
-          <div class="card">
-            <header class="card__header"><h3>Price Stack</h3></header>
-            <div class="card__body" data-role="price-stack-viz"><p>Price stack visualization...</p></div>
-          </div>
-          <div class="card">
-            <header class="card__header"><h3>Volatility & Correlation</h3></header>
-            <div class="card__body" data-role="vol-corr-viz"><p>Vol & Corr gauges...</p></div>
-          </div>
+          <div class="card"><div class="card__body"><canvas id="chart-forward-curve" height="200"></canvas></div></div>
+          <div class="card"><div class="card__body"><canvas id="chart-exposure-ladder" height="200"></canvas></div></div>
+          <div class="card"><div class="card__body"><canvas id="chart-basis-history" height="200"></canvas></div></div>
+          <div class="card" id="tile-price-stack"><div class="card__body"></div></div>
+          <div class="card" id="tile-vol-corr"><div class="card__body"></div></div>
           <div class="card">
             <header class="card__header"><h3>What-If Simulator</h3></header>
-            <div class="card__body" data-role="what-if-sim">
+            <div class="card__body">
               <div class="form-group--slider">
-                <label for="boardShock">Board Shock (%)</label>
-                <input type="range" id="boardShock" name="boardShock" min="-3" max="3" value="0" step="0.1">
+                <label for="whatif-board">Board Shock (%)</label>
+                <input type="range" id="whatif-board" name="boardShock" min="-3" max="3" value="0" step="0.1">
                 <span class="value-label">0.0%</span>
               </div>
               <div class="form-group--slider">
-                <label for="basisShock">Basis Shock (¢)</label>
-                <input type="range" id="basisShock" name="basisShock" min="-30" max="30" value="0" step="1">
+                <label for="whatif-basis">Basis Shock (¢)</label>
+                <input type="range" id="whatif-basis" name="basisShock" min="-30" max="30" value="0" step="1">
                 <span class="value-label">0¢</span>
               </div>
-              <div class="what-if-results" data-role="what-if-results">
-                 <p><strong>Projected Impact</strong></p>
-                 <span>Δ Futures P&L: $0</span>
-                 <span>Δ Basis P&L: $0</span>
-                 <span>Δ Net P&L: $0</span>
-              </div>
+              <canvas id="chart-whatif" height="100"></canvas>
             </div>
           </div>
         </div>
       </div>
       <div class="card full-width">
-         <header class="card__header"><h3>Actions Log: ${commodityTitle}</h3></header>
-         <div class="card__body">
-           <table class="data-table" data-table="actions-log">
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Action</th>
-                  <th>Month</th>
-                  <th>%/Qty</th>
-                  <th>Δ P&L</th>
-                </tr>
-              </thead>
-              <tbody><tr><td colspan="5">No actions logged yet.</td></tr></tbody>
-           </table>
+         <header class="card__header"><h3>Actions Log: ${commodityTitle}</h3> <button class="btn btn-secondary btn-sm">Export CSV</button></header>
+         <div class="card__body" id="hedge-actions-log">
+           <!-- Log table will be rendered here -->
          </div>
       </div>
     `;
 
-    // --- Data Population ---
+    // --- Mount Sequence ---
     const headerData = data.getHedgeDetailHeader(commodity);
-    const kpiContainer = detailView.querySelector('[data-role="detail-kpis"]');
+    const kpiContainer = document.getElementById('hedge-detail-header');
     Object.entries(headerData).forEach(([key, value]) => {
-      const el = kpiContainer.querySelector(`[data-kpi="${key}"]`);
-      if (el) {
-        if (key.includes('Percent')) el.textContent = utils.formatPercent(value);
-        else if (key.includes('PL') || key.includes('mtm')) el.textContent = utils.formatCurrency(value);
-        else el.textContent = value.toLocaleString();
-      }
+        const el = kpiContainer.querySelector(`[data-kpi="${key}"]`);
+        if (el) {
+            if (key.includes('Percent')) el.textContent = utils.formatPercent(value);
+            else if (key.includes('PL') || key.includes('mtm')) el.textContent = utils.formatCurrency(value);
+            else el.textContent = value.toLocaleString();
+        }
     });
 
-    const forwardCurveData = data.getForwardCurve(commodity);
-    charts.mountForwardCurveChart(detailView.querySelector('#chart-forward-curve'), forwardCurveData);
+    const curve = data.getForwardCurve(commodity);
+    charts.mountForwardCurve(document.getElementById('chart-forward-curve'), curve);
 
-    const exposureLadderData = data.getExposureByMonth(commodity);
-    charts.mountExposureLadderChart(detailView.querySelector('#chart-exposure-ladder'), exposureLadderData);
+    const ladder = data.getExposureByMonth(commodity);
+    const formEl = document.getElementById('hedgeFormDetail');
+    const prefillTicketMonth = (month) => {
+        const monthSelect = formEl.querySelector('[name="month"]');
+        monthSelect.value = month;
+        utils.showToast(`Selected ${month} in Action Ticket.`);
+    };
+    charts.mountExposureLadder(document.getElementById('chart-exposure-ladder'), ladder, { onSelectMonth: prefillTicketMonth });
 
-    const basisHistoryData = data.getBasisHistory(commodity);
+    const basis = data.getBasisHistory(commodity);
     const basisChartData = {
-        labels: basisHistoryData[Object.keys(basisHistoryData)[0]].map(d => new Date(d.date).toLocaleString('default', { month: 'short' })),
-        datasets: Object.entries(basisHistoryData).map(([zone, data]) => ({
+        labels: basis[Object.keys(basis)[0]].map(d => new Date(d.date).toLocaleString('default', { month: 'short' })),
+        datasets: Object.entries(basis).map(([zone, data]) => ({
             label: zone,
             data: data.map(d => d.basis)
         }))
     };
-    charts.mountBasisHistoryChart(detailView.querySelector('#chart-basis-history'), basisChartData);
+    charts.mountBasisHistory(document.getElementById('chart-basis-history'), basisChartData);
 
-    const priceStackData = data.getPriceStack(commodity);
-    const priceStackContainer = detailView.querySelector('[data-role="price-stack-viz"]');
-    priceStackContainer.innerHTML = priceStackData.map(d => `
-        <p>${d.month}: <strong>${d.local.toFixed(2)}</strong> (${d.board.toFixed(2)} + ${d.point.toFixed(2)} + ${d.zone.toFixed(2)})</p>
-    `).join('');
+    const priceStack = data.getPriceStack(commodity);
+    const priceStackContainer = document.getElementById('tile-price-stack');
+    priceStackContainer.innerHTML = priceStack.map(d => `<p>${d.month}: <strong>${d.local.toFixed(2)}</strong> (${d.board.toFixed(2)} + ${d.point.toFixed(2)} + ${d.zone.toFixed(2)})</p>`).join('');
 
-    const volCorrData = data.getVolAndCorr(commodity);
-    const volCorrContainer = detailView.querySelector('[data-role="vol-corr-viz"]');
-    volCorrContainer.innerHTML = `<p>30d Vol: <strong>${volCorrData.volatility}</strong> | 90d Corr(B,B): <strong>${volCorrData.correlation}</strong></p>`;
-
-    const actionsLogData = data.getActionsLog(commodity);
-    const actionsLogTbody = detailView.querySelector('[data-table="actions-log"] tbody');
-    actionsLogTbody.innerHTML = actionsLogData.map(a => `
-        <tr>
-            <td>${a.timestamp}</td>
-            <td>${a.action}</td>
-            <td>${a.month}</td>
-            <td>${a.qty}</td>
-            <td>${utils.formatCurrency(a.pnl)}</td>
-        </tr>
-    `).join('');
-
+    const volCorr = data.getVolAndCorr(commodity);
+    const volCorrContainer = document.getElementById('tile-vol-corr');
+    volCorrContainer.innerHTML = `<p>30d Vol: <strong>${volCorr.volatility}</strong> | 90d Corr(B,B): <strong>${volCorr.correlation}</strong></p>`;
 
     // --- Simulator ---
-    const simulator = detailView.querySelector('[data-role="what-if-sim"]');
-    const boardSlider = simulator.querySelector('[name="boardShock"]');
-    const basisSlider = simulator.querySelector('[name="basisShock"]');
+    const simulator = document.getElementById('whatif-board').closest('.card');
+    const boardSlider = simulator.querySelector('#whatif-board');
+    const basisSlider = simulator.querySelector('#whatif-basis');
 
     function updateSimulator() {
         const boardPct = parseFloat(boardSlider.value);
@@ -787,23 +747,14 @@
         simulator.querySelector('.value-label:nth-of-type(1)').textContent = `${boardPct.toFixed(1)}%`;
         simulator.querySelector('.value-label:nth-of-type(2)').textContent = `${basisCents}¢`;
 
-        const { futuresDelta, basisDelta, netDelta } = data.simulateShock({
-            commodity,
-            boardPct,
-            basisCents
-        });
-
-        const results = simulator.querySelector('[data-role="what-if-results"]');
-        results.querySelector('span:nth-of-type(1)').textContent = `Δ Futures P&L: ${utils.formatCurrency(futuresDelta)}`;
-        results.querySelector('span:nth-of-type(2)').textContent = `Δ Basis P&L: ${utils.formatCurrency(basisDelta)}`;
-        results.querySelector('span:nth-of-type(3)').textContent = `Δ Net P&L: ${utils.formatCurrency(netDelta)}`;
+        const res = data.simulateShock({ commodity, boardPct, basisCents });
+        charts.mountWhatIf(document.getElementById('chart-whatif'), res);
     }
 
     simulator.addEventListener('input', updateSimulator);
     updateSimulator();
 
     // --- Action Ticket ---
-    const formEl = detailView.querySelector('#hedgeFormDetail');
     updateHedgeFormUI(formEl); // Re-use for month population
     validateAndPreviewHedgeForm(formEl);
 
@@ -812,27 +763,36 @@
     formEl.addEventListener('submit', (event) => {
         event.preventDefault();
         const formData = new FormData(formEl);
-        const commodity = formData.get('commodity');
         const percent = Number(formData.get('percent'));
         const month = formData.get('month');
         data.hedgeExposure({ commodity, percent, month });
         utils.showToast(`Hedged ${percent}% ${commodity} in ${month}`);
         document.dispatchEvent(new CustomEvent('ctrm:dataChanged', { detail: { commodity }}));
+        renderHedge({ params: { commodity }}); // Refresh in-place
     });
 
-    // --- Chart Interaction ---
-    const ladderChart = charts.mountExposureLadderChart(detailView.querySelector('#chart-exposure-ladder'), exposureLadderData);
-    if (ladderChart) {
-      ladderChart.options.onClick = (e) => {
-          const points = ladderChart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
-          if (points.length) {
-              const month = ladderChart.data.labels[points[0].index];
-              const monthSelect = formEl.querySelector('[name="month"]');
-              monthSelect.value = month;
-              utils.showToast(`Selected ${month} in Action Ticket.`);
-          }
-      };
-      ladderChart.update();
+    // --- Actions Log ---
+    const actionsLogData = data.getActionsLog(commodity);
+    const actionsLogContainer = document.getElementById('hedge-actions-log');
+    if (actionsLogData.length > 0) {
+        actionsLogContainer.innerHTML = `
+            <table class="data-table">
+                <thead><tr><th>Timestamp</th><th>Action</th><th>Month</th><th>%/Qty</th><th>Δ P&L</th></tr></thead>
+                <tbody>
+                    ${actionsLogData.map(a => `
+                        <tr>
+                            <td>${new Date(a.ts).toLocaleString()}</td>
+                            <td>${a.type}</td>
+                            <td>${a.month}</td>
+                            <td>${a.value}</td>
+                            <td>${utils.formatCurrency(a.pnlDelta)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    } else {
+        actionsLogContainer.innerHTML = `<p>No actions logged for ${commodityTitle} yet.</p>`;
     }
   }
 
