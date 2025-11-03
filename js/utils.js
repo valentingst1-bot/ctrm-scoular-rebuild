@@ -111,6 +111,14 @@
       .join(' ');
   }
 
+  function safeText(selector, value) {
+    if (!selector) return;
+    const el = document.querySelector(selector);
+    if (el) {
+      el.textContent = value;
+    }
+  }
+
   window.CTRMUtils = {
     formatMillions,
     formatCurrency,
@@ -123,5 +131,6 @@
     getCommodityColor,
     slug,
     unslug,
+    safeText,
   };
 })();
