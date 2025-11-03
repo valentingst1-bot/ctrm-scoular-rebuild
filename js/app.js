@@ -16,7 +16,15 @@
   const ChartJS = window.Chart;
 
   const snapshotButtons = document.querySelectorAll('.snapshot-toggle .toggle-button');
-  const kpiTiles = document.querySelectorAll('.kpi-tile');
+  const KPI_SELECTORS = {
+    mtm: '[data-kpi="mtm"]',
+    hedge: '[data-kpi="hedge"]',
+    basis: '[data-kpi="basis"]',
+    futures: '[data-kpi="futures"]',
+    freight: '[data-kpi="freight"]',
+    other: '[data-kpi="other"]',
+    wc: '[data-kpi="wc"]',
+  };
   const views = Array.from(document.querySelectorAll('.view')).reduce((map, viewEl) => {
     map[viewEl.dataset.route] = { el: viewEl };
     return map;
@@ -137,10 +145,10 @@
 
   snapshotButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
-      snapshotButtons.forEach((b) => b.classList.toggle('is-active', b === btn));
-      data.setSnapshot(btn.dataset.snapshot);
-      renderHeader();
-      renderActiveView();
+      const key = btn.dataset.snapshot;
+      if (key) {
+        data.setSnapshot(key);
+      }
     });
   });
 
@@ -158,7 +166,6 @@
 
   data.subscribe((event) => {
     if (event.type === 'snapshotUpdated' || event.type === 'snapshotChanged') {
-      renderHeader(event.payload?.snapshot);
       renderActiveView();
     }
     if (event.type === 'inventoryUpdated') {
@@ -167,6 +174,7 @@
   });
 
   document.addEventListener('ctrm:dataChanged', () => {
+    renderHeader(data.getHeaderSnapshot?.());
     renderHedge(lastRouteContext);
   });
   document.addEventListener('click', (event) => {
@@ -177,7 +185,6 @@
     const resetBtn = event.target.closest('[data-action="reset-demo"]');
     if (resetBtn) {
       data.resetDemo();
-      renderHeader();
       renderActiveView();
     }
   });
@@ -274,26 +281,36 @@
     if (handler && handler.render) {
       handler.render(context);
     }
+    renderHeader(data.getHeaderSnapshot?.());
   }
 
   function renderHeader(snapshot) {
-    const snap = snapshot || data.getSnapshot();
+    const snap = snapshot || (typeof data.getHeaderSnapshot === 'function' ? data.getHeaderSnapshot() : null);
+    if (!snap) return;
+
     const formatters = {
-      mtmChange: (v) => utils.formatMillions(v),
-      hedgeCoverage: (v) => utils.formatPercent(v),
-      basisPL: (v) => utils.formatMillions(v),
-      futuresPL: (v) => utils.formatMillions(v),
-      freightVar: (v) => utils.formatMillions(v),
-      otherPL: (v) => utils.formatMillions(v),
-      workingCapital: (v) => utils.formatMillions(v),
+      mtm: utils.formatMillions,
+      hedge: utils.formatPercent,
+      basis: utils.formatMillions,
+      futures: utils.formatMillions,
+      freight: utils.formatMillions,
+      other: utils.formatMillions,
+      wc: utils.formatMillions,
     };
-    kpiTiles.forEach((tile) => {
-      const key = tile.dataset.kpi;
-      const formatter = formatters[key] || ((value) => value);
-      tile.querySelector('.kpi-value').textContent = formatter(snap[key]);
+
+    Object.entries(KPI_SELECTORS).forEach(([key, selector]) => {
+      const formatter = formatters[key] || ((value) => (value ?? '--'));
+      const rawValue = snap[key];
+      const value = typeof rawValue === 'number'
+        ? rawValue
+        : (rawValue !== null && rawValue !== '' && !Number.isNaN(Number(rawValue)) ? Number(rawValue) : rawValue);
+      const formatted = formatter(value);
+      safeText(selector, formatted ?? '--');
     });
+
+    const activeKey = snap.key || (typeof data.getSnapshot === 'function' ? data.getSnapshot().key : undefined);
     snapshotButtons.forEach((btn) => {
-      btn.classList.toggle('is-active', btn.dataset.snapshot === snap.key);
+      btn.classList.toggle('is-active', btn.dataset.snapshot === activeKey);
     });
   }
 
@@ -1035,13 +1052,15 @@
       const button = utils.createElement('button', { text: `Load ${key === 'today' ? 'Live' : 'Month-End Aug'}`, attrs: { 'data-snapshot': key } });
       button.addEventListener('click', () => {
         data.setSnapshot(key);
-        renderHeader();
-        renderActiveView();
       });
       snapshotContainer.appendChild(button);
     });
   }
 
-  renderHeader();
-  renderActiveView();
+  const runHeaderBootstrap = () => renderHeader(data.getHeaderSnapshot?.());
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runHeaderBootstrap, { once: true });
+  } else {
+    runHeaderBootstrap();
+  }
 })();
