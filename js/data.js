@@ -310,6 +310,18 @@
     { symbol: 'ZW', month: 'Dec-24', qty: -280, avgPrice: 7.48, account: 'INT-HEDGE' },
     { symbol: 'RS', month: 'Nov-24', qty: -180, avgPrice: 688, account: 'INT-HEDGE' },
   ];
+  const SYMBOL_TO_COMMODITY = {
+    ZS: 'Soybeans',
+    ZC: 'Corn',
+    ZW: 'Wheat',
+    RS: 'Canola',
+  };
+  const COMMODITY_TO_SYMBOL = {
+    Soybeans: 'ZS',
+    Corn: 'ZC',
+    Wheat: 'ZW',
+    Canola: 'RS',
+  };
 
   const pricing = {
     marketPrices: [
@@ -576,27 +588,39 @@
     notify('snapshotUpdated', { snapshot: getSnapshot() });
   }
 
-  function rollMonth({ symbol, from, to }) {
-    const position = futuresPositions.find((pos) => pos.symbol === symbol && pos.month === from);
-    if (!position) return;
+  function rollMonth({ commodity, from, to, symbol }) {
+    let targetSymbol = symbol || (commodity ? COMMODITY_TO_SYMBOL[commodity] : undefined);
+    let position = null;
+    if (targetSymbol) {
+      position = futuresPositions.find((pos) => pos.symbol === targetSymbol && pos.month === from) || null;
+    }
+    if (!position) {
+      position = futuresPositions.find((pos) => pos.month === from) || null;
+      if (position) {
+        targetSymbol = position.symbol;
+      }
+    }
 
     const pnlDelta = (Math.random() * 20000) + 5000;
-    position.month = to;
-    position.avgPrice += 0.08;
+    if (position) {
+      position.month = to;
+      position.avgPrice += 0.08;
+    }
     updateKpiAdjustment('futuresPL', pnlDelta / 1000000);
     updateKpiAdjustment('mtmChange', 0.2);
 
+    const resolvedCommodity = commodity || (targetSymbol ? SYMBOL_TO_COMMODITY[targetSymbol] : 'N/A');
     actionsLog.push({
         ts: new Date().toISOString(),
         type: 'roll',
-        commodity: 'N/A', // Symbol would need mapping
+        commodity: resolvedCommodity,
         month: `${from} -> ${to}`,
-        value: position.qty,
+        value: position?.qty ?? 0,
         pnlDelta
     });
 
     recordHedgePoint(to);
-    notify('futuresRolled', { symbol, from, to });
+    notify('futuresRolled', { symbol: targetSymbol, from, to });
     notify('snapshotUpdated', { snapshot: getSnapshot() });
   }
 
