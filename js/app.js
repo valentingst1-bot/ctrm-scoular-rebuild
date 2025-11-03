@@ -298,6 +298,7 @@
       wc: utils.formatMillions,
     };
 
+    const safeText = window.CTRMUtils?.safeText;
     Object.entries(KPI_SELECTORS).forEach(([key, selector]) => {
       const formatter = formatters[key] || ((value) => (value ?? '--'));
       const rawValue = snap[key];
@@ -305,7 +306,9 @@
         ? rawValue
         : (rawValue !== null && rawValue !== '' && !Number.isNaN(Number(rawValue)) ? Number(rawValue) : rawValue);
       const formatted = formatter(value);
-      safeText(selector, formatted ?? '--');
+      if (typeof safeText === 'function') {
+        window.CTRMUtils.safeText(selector, formatted ?? '--');
+      }
     });
 
     const activeKey = snap.key || (typeof data.getSnapshot === 'function' ? data.getSnapshot().key : undefined);
