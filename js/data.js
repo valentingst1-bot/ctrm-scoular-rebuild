@@ -611,6 +611,113 @@
       };
     });
   }
+
+  function getHedgeDetailHeader(commodity) {
+    const summary = getExposureSummary().byCommodity[commodity];
+    if (!summary) return null;
+
+    const hedgePercent = summary.physical > 0 ? (summary.hedged / summary.physical) * 100 : 0;
+    return {
+      physQty: summary.physical,
+      hedgedQty: summary.hedged,
+      hedgePercent: hedgePercent,
+      unhedgedQty: Math.max(0, summary.physical - summary.hedged),
+      mtm: (Math.random() * 2 - 1) * 500000,
+      basisPL: (Math.random() * 2 - 1) * 300000,
+      futuresPL: (Math.random() * 2 - 1) * 200000,
+    };
+  }
+
+  function getForwardCurve(commodity) {
+    const months = ['Nov-24', 'Jan-25', 'Mar-25', 'May-25', 'Jul-25', 'Sep-25'];
+    let startPrice = 13.50;
+    if (commodity === 'Corn') startPrice = 5.20;
+    if (commodity === 'Wheat') startPrice = 7.80;
+    if (commodity === 'Canola') startPrice = 710;
+
+    return months.map((month, i) => ({
+      month,
+      price: startPrice + (i * 0.15) + (Math.random() - 0.5) * 0.1,
+    }));
+  }
+
+  function getExposureLadder(commodity) {
+      const summary = getExposureSummary().byCommodity[commodity];
+      if (!summary) return [];
+      const months = ['Sep-24', 'Oct-24', 'Nov-24', 'Dec-24', 'Jan-25'];
+      const totalPhys = summary.physical;
+      const totalHedged = summary.hedged;
+
+      return months.map((month, i) => {
+          const phys = totalPhys / months.length * (1 - i*0.1 + Math.random()*0.1);
+          const hedged = totalHedged / months.length * (1 - i*0.05 + Math.random()*0.05);
+          return {
+              month,
+              physical: Math.round(phys),
+              hedged: Math.round(hedged),
+              unhedged: Math.max(0, Math.round(phys - hedged)),
+          };
+      });
+  }
+
+  function getBasisHistory(commodity) {
+      const zones = ['Prairie North', 'Gulf Export', 'Mississippi River'];
+      const labels = ['Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'];
+      const datasets = zones.map((zone, i) => {
+          let basis = 0.20 - i*0.05;
+          return {
+              label: zone,
+              data: labels.map(() => {
+                  basis += (Math.random() - 0.5) * 0.05;
+                  return basis;
+              })
+          };
+      });
+      return { labels, datasets };
+  }
+
+  function getPriceStack(commodity) {
+      const months = ['Jun-24', 'Jul-24', 'Aug-24', 'Sep-24'];
+      let board = 13.20;
+       if (commodity === 'Corn') board = 5.10;
+       if (commodity === 'Wheat') board = 7.60;
+
+      return months.map(month => {
+          board += (Math.random() - 0.4) * 0.1;
+          const point = (Math.random() * 0.1) + 0.2;
+          const zone = (Math.random() * 0.1) + 0.15;
+          return {
+              month,
+              board: board,
+              point: point,
+              zone: zone,
+              local: board + point + zone,
+          }
+      })
+  }
+
+  function getVolAndCorr(commodity) {
+      return {
+          volatility: (Math.random() * 15 + 15).toFixed(1) + '%',
+          correlation: (Math.random() * 0.4 + 0.3).toFixed(2),
+      };
+  }
+
+  function getActionsLog(commodity) {
+      const actions = [];
+      const types = ['Hedge', 'Roll', 'Lift Hedge'];
+      const months = ['Nov-24', 'Jan-25', 'Mar-25'];
+      for (let i=0; i < 7; i++) {
+          actions.push({
+              timestamp: `2024-09-${28-i*2} 10:3${i} AM`,
+              action: types[i % types.length],
+              month: months[i % months.length],
+              qty: `${Math.round(Math.random()*20+5)}%`,
+              pnl: (Math.random() * 10000 - 4000)
+          });
+      }
+      return actions;
+  }
   window.CTRMData = {
     subscribe,
     setSnapshot,
@@ -622,6 +729,13 @@
     getPricing,
     getExposureSummary,
     getExposureByCommodity,
+    getHedgeDetailHeader,
+    getForwardCurve,
+    getExposureLadder,
+    getBasisHistory,
+    getPriceStack,
+    getVolAndCorr,
+    getActionsLog,
     getVarianceActivity,
     getCarrySpark,
     getCarryHeadline,
