@@ -192,81 +192,180 @@
       </section>
 
       <section class="view" data-route="#/hedge" aria-labelledby="view-hedge" hidden>
-        <div class="exposure-bar-container">
-          <canvas id="chart-exposure-distribution" height="40"></canvas>
-        </div>
-        <h2 id="view-hedge" class="view-title">Hedge Workbench</h2>
-        <div class="view-grid hedge-grid" data-view-mode="overview">
-          <div class="card full-width">
-            <table class="data-table" data-table="hedge-positions">
-              <thead>
-                <tr>
-                  <th>Commodity</th>
-                  <th>Physical Qty</th>
-                  <th>Hedged Qty</th>
-                  <th>Hedge %</th>
-                  <th>Unhedged Qty</th>
-                  <th>Next Month</th>
-                  <th>Avg Basis</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+        <section id="hedge-overview" data-view-mode="overview">
+          <div class="exposure-bar-container">
+            <canvas id="chart-exposure-distribution" height="40"></canvas>
           </div>
-          <section class="card" data-role="hedge-actions-card">
-            <header class="card__header"><h3>Actions</h3></header>
-            <div class="card__body">
-              <form id="hedgeForm" class="hedge-form">
-                <div class="form-group" role="radiogroup" aria-labelledby="action-type-label">
-                  <span id="action-type-label" class="form-label">Action</span>
-                  <div class="form-group--radios">
-                    <label>
-                      <input type="radio" name="actionType" value="hedge" checked> Hedge % of exposure
-                    </label>
-                    <label>
-                      <input type="radio" name="actionType" value="roll"> Roll month
-                    </label>
-                  </div>
-                </div>
-
-                <div data-form-group="commodity">
-                  <label class="form-label" for="commoditySelect">Commodity</label>
-                  <select id="commoditySelect" name="commodity"></select>
-                </div>
-
-                <div data-form-group="hedgeFields">
-                  <label class="form-label" for="hedgePercent">Hedge %</label>
-                  <div class="form-group--slider">
-                    <input type="range" id="hedgePercent" name="percent" min="0" max="100" value="25">
-                    <input type="number" name="percent-display" min="0" max="100" value="25" class="input--small">
-                  </div>
-                  <p class="helper-text">Targets % of current unhedged exposure.</p>
-                  <label class="form-label" for="boardMonth">Board Month</label>
-                  <select id="boardMonth" name="month"></select>
-                </div>
-
-                <div data-form-group="rollFields" hidden>
-                  <label class="form-label" for="fromMonth">From Month</label>
-                  <select id="fromMonth" name="from"></select>
-                  <label class="form-label" for="toMonth">To Month</label>
-                  <select id="toMonth" name="to"></select>
-                </div>
-
-                <button type="submit" class="button--primary" disabled>Apply</button>
-
-                <div class="impact-preview" data-role="impact-preview">
-                  <p><strong>Impact Preview</strong></p>
-                  <span>Δ Hedge %: --</span>
-                  <span>Δ Futures P&L: --</span>
-                </div>
-              </form>
+          <h2 id="view-hedge" class="view-title">Hedge Workbench</h2>
+          <div class="view-grid hedge-grid">
+            <div class="card full-width">
+              <table class="data-table" data-table="hedge-positions">
+                <thead>
+                  <tr>
+                    <th>Commodity</th>
+                    <th>Physical Qty</th>
+                    <th>Hedged Qty</th>
+                    <th>Hedge %</th>
+                    <th>Unhedged Qty</th>
+                    <th>Next Month</th>
+                    <th>Avg Basis</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
             </div>
-          </section>
-        </div>
-        <div class="view-grid hedge-grid" data-view-mode="detail" hidden>
-            <!-- Content for the commodity-specific view will go here -->
-        </div>
+            <section class="card" data-role="hedge-actions-card">
+              <header class="card__header"><h3>Actions</h3></header>
+              <div class="card__body">
+                <form id="hedgeForm" class="hedge-form">
+                  <div class="form-group" role="radiogroup" aria-labelledby="action-type-label">
+                    <span id="action-type-label" class="form-label">Action</span>
+                    <div class="form-group--radios">
+                      <label>
+                        <input type="radio" name="actionType" value="hedge" checked> Hedge % of exposure
+                      </label>
+                      <label>
+                        <input type="radio" name="actionType" value="roll"> Roll month
+                      </label>
+                    </div>
+                  </div>
+
+                  <div data-form-group="commodity">
+                    <label class="form-label" for="commoditySelect">Commodity</label>
+                    <select id="commoditySelect" name="commodity"></select>
+                  </div>
+
+                  <div data-form-group="hedgeFields">
+                    <label class="form-label" for="hedgePercent">Hedge %</label>
+                    <div class="form-group--slider">
+                      <input type="range" id="hedgePercent" name="percent" min="0" max="100" value="25">
+                      <input type="number" name="percent-display" min="0" max="100" value="25" class="input--small">
+                    </div>
+                    <p class="helper-text">Targets % of current unhedged exposure.</p>
+                    <label class="form-label" for="boardMonth">Board Month</label>
+                    <select id="boardMonth" name="month"></select>
+                  </div>
+
+                  <div data-form-group="rollFields" hidden>
+                    <label class="form-label" for="fromMonth">From Month</label>
+                    <select id="fromMonth" name="from"></select>
+                    <label class="form-label" for="toMonth">To Month</label>
+                    <select id="toMonth" name="to"></select>
+                  </div>
+
+                  <button type="submit" class="button--primary" disabled>Apply</button>
+
+                  <div class="impact-preview" data-role="impact-preview">
+                    <p><strong>Impact Preview</strong></p>
+                    <span>Δ Hedge %: --</span>
+                    <span>Δ Futures P&L: --</span>
+                  </div>
+                </form>
+              </div>
+            </section>
+          </div>
+        </section>
+        <section id="hedge-detail" data-view-mode="detail" hidden>
+          <a href="#/hedge" class="back-link">&larr; Back to Overview</a>
+          <header class="hedge-detail-header">
+            <div class="hedge-detail-header__main">
+              <h2 data-role="hedge-detail-title">Commodity Hedge Detail</h2>
+              <p data-role="hedge-detail-subtitle">Position context &amp; market structure</p>
+            </div>
+            <a class="hedge-detail-header__popout" data-role="hedge-popout" href="#/hedge" target="_blank" rel="noopener">↗ Pop-out</a>
+          </header>
+          <div class="kpi-strip kpi-strip--mini" data-role="hedge-detail-kpis">
+            <article class="kpi-tile kpi-tile--mini"><h3>Physical</h3><p data-kpi="physQty">--</p></article>
+            <article class="kpi-tile kpi-tile--mini"><h3>Hedged</h3><p data-kpi="hedgedQty">--</p></article>
+            <article class="kpi-tile kpi-tile--mini"><h3>Hedge %</h3><p data-kpi="hedgePercent">--</p></article>
+            <article class="kpi-tile kpi-tile--mini"><h3>Unhedged</h3><p data-kpi="unhedgedQty">--</p></article>
+            <article class="kpi-tile kpi-tile--mini"><h3>MTM</h3><p data-kpi="mtm">--</p></article>
+            <article class="kpi-tile kpi-tile--mini"><h3>Basis P&amp;L</h3><p data-kpi="basisPL">--</p></article>
+            <article class="kpi-tile kpi-tile--mini"><h3>Futures P&amp;L</h3><p data-kpi="futuresPL">--</p></article>
+          </div>
+          <div class="hedge-detail" data-role="hedge-detail-layout">
+            <div class="hedge-detail__ticket" data-role="hedge-ticket-slot"></div>
+            <div class="hedge-detail__charts">
+              <section class="card" data-role="term-structure-card">
+                <header class="card__header card__header--split">
+                  <h3>Term Structure</h3>
+                  <span class="card__unit">$/bu</span>
+                </header>
+                <div class="card__body">
+                  <canvas id="chart-term-structure" height="220"></canvas>
+                  <p class="no-data" hidden>No data available</p>
+                </div>
+              </section>
+              <section class="card" data-role="exposure-ladder-card">
+                <header class="card__header card__header--split">
+                  <h3>Exposure Ladder</h3>
+                  <span class="card__unit">Contracts</span>
+                </header>
+                <div class="card__body">
+                  <canvas id="chart-exposure-ladder" height="220"></canvas>
+                  <p class="no-data" hidden>No data available</p>
+                </div>
+              </section>
+              <section class="card" data-role="basis-history-card">
+                <header class="card__header card__header--split">
+                  <h3>Basis History</h3>
+                  <span class="card__unit">¢/bu</span>
+                </header>
+                <div class="card__body">
+                  <canvas id="chart-basis-history" height="220"></canvas>
+                  <p class="no-data" hidden>No data available</p>
+                </div>
+              </section>
+              <section class="card" data-role="price-stack-card">
+                <header class="card__header card__header--split">
+                  <h3>Price Stack</h3>
+                  <span class="card__unit">$/bu</span>
+                </header>
+                <div class="card__body" data-role="price-stack-body">
+                  <p class="no-data">No data available</p>
+                </div>
+              </section>
+              <section class="card" data-role="vol-corr-card">
+                <header class="card__header card__header--split">
+                  <h3>Vol &amp; Correlation</h3>
+                  <span class="card__unit">Risk</span>
+                </header>
+                <div class="card__body" data-role="vol-corr-body">
+                  <p class="no-data">No data available</p>
+                </div>
+              </section>
+              <section class="card" data-role="what-if-card">
+                <header class="card__header card__header--split">
+                  <h3>What-If Simulator</h3>
+                  <span class="card__unit">Δ P&amp;L</span>
+                </header>
+                <div class="card__body">
+                  <div class="form-group--slider">
+                    <label for="whatif-board">Board Shock (%)</label>
+                    <input type="range" id="whatif-board" name="boardShock" min="-3" max="3" value="0" step="0.1">
+                    <span class="value-label" data-role="board-label">0.0%</span>
+                  </div>
+                  <div class="form-group--slider">
+                    <label for="whatif-basis">Basis Shock (¢)</label>
+                    <input type="range" id="whatif-basis" name="basisShock" min="-30" max="30" value="0" step="1">
+                    <span class="value-label" data-role="basis-label">0¢</span>
+                  </div>
+                  <canvas id="chart-whatif" height="120"></canvas>
+                </div>
+              </section>
+            </div>
+            <section class="card hedge-detail__log" data-role="actions-log-card">
+              <header class="card__header card__header--split">
+                <h3>Actions Log</h3>
+                <span class="card__unit">History</span>
+              </header>
+              <div class="card__body" data-role="actions-log-body">
+                <p class="no-data">No actions logged yet.</p>
+              </div>
+            </section>
+          </div>
+        </section>
       </section>
 
       <section class="view" data-route="#/risk" aria-labelledby="view-risk" hidden>
