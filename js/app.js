@@ -639,18 +639,21 @@
         <td>${row.unhedgedQty.toLocaleString()}</td>
         <td>${row.nextMonth}</td>
         <td>${avgBasis}</td>
-        <td><button class="btn open-hedge" data-commodity-slug="${commoditySlug}">Open Hedge</button></td>
+        <td><a class="open-hedge" href="#/hedge/${commoditySlug}" target="_blank" rel="noopener">Open Hedge</a></td>
       `;
       tbody.appendChild(tr);
     });
 
     if (!hedgeOverviewContainer.dataset.listenerAttached) {
       hedgeOverviewContainer.addEventListener('click', (event) => {
-        const button = event.target.closest('.open-hedge');
+        const link = event.target.closest('a.open-hedge');
+        if (link) return;
+
         const row = event.target.closest('tr[data-commodity-slug]');
-        if (!button && !row) return;
+        if (!row) return;
+
         event.preventDefault();
-        const commoditySlug = button ? button.dataset.commoditySlug : row.dataset.commoditySlug;
+        const commoditySlug = row.dataset.commoditySlug;
         if (commoditySlug) {
           router.navigate(`#/hedge/${commoditySlug}`);
         }
