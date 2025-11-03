@@ -351,7 +351,30 @@
                     <input type="range" id="whatif-basis" name="basisShock" min="-30" max="30" value="0" step="1">
                     <span class="value-label" data-role="basis-label">0¢</span>
                   </div>
-                  <canvas id="chart-whatif" height="120"></canvas>
+                  <section class="whatif-result" aria-label="What-If Result">
+                    <header class="whatif-result__header">
+                      <h4>What-If Result</h4>
+                    </header>
+                    <div class="whatif-result__chart">
+                      <canvas id="chart-whatif" height="150"></canvas>
+                    </div>
+                    <table class="whatif-result__table">
+                      <tbody>
+                        <tr>
+                          <th scope="row">Futures Δ</th>
+                          <td data-role="whatif-futures">$0.0k</td>
+                        </tr>
+                        <tr>
+                          <th scope="row">Basis Δ</th>
+                          <td data-role="whatif-basis">$0.0k</td>
+                        </tr>
+                        <tr>
+                          <th scope="row">Net Δ</th>
+                          <td data-role="whatif-net">$0.0k</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </section>
                 </div>
               </section>
             </div>

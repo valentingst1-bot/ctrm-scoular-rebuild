@@ -62,6 +62,9 @@
     boardLabel: hedgeDetailContainer.querySelector('[data-role="board-label"]'),
     basisLabel: hedgeDetailContainer.querySelector('[data-role="basis-label"]'),
     whatIfChart: hedgeDetailContainer.querySelector('#chart-whatif'),
+    whatIfFutures: hedgeDetailContainer.querySelector('[data-role="whatif-futures"]'),
+    whatIfBasisValue: hedgeDetailContainer.querySelector('[data-role="whatif-basis"]'),
+    whatIfNet: hedgeDetailContainer.querySelector('[data-role="whatif-net"]'),
   } : {};
   const SYMBOL_TO_COMMODITY = {
     ZS: 'Soybeans',
@@ -889,9 +892,22 @@
         const basisCents = parseInt(detailCardBodies.whatIfBasis?.value || '0', 10);
         if (detailCardBodies.boardLabel) detailCardBodies.boardLabel.textContent = `${boardPct.toFixed(1)}%`;
         if (detailCardBodies.basisLabel) detailCardBodies.basisLabel.textContent = `${basisCents}¢`;
+        const result = data.simulateShock({ commodity: commodityName, boardPct, basisCents }) || {
+          futuresDelta: 0,
+          basisDelta: 0,
+          netDelta: 0,
+        };
         if (detailCardBodies.whatIfChart) {
-          const res = data.simulateShock({ commodity: commodityName, boardPct, basisCents });
-          charts.mountWhatIf(detailCardBodies.whatIfChart, res);
+          charts.mountWhatIf(detailCardBodies.whatIfChart, result);
+        }
+        if (detailCardBodies.whatIfFutures) {
+          detailCardBodies.whatIfFutures.textContent = utils.formatCurrencyThousands(result.futuresDelta || 0);
+        }
+        if (detailCardBodies.whatIfBasisValue) {
+          detailCardBodies.whatIfBasisValue.textContent = utils.formatCurrencyThousands(result.basisDelta || 0);
+        }
+        if (detailCardBodies.whatIfNet) {
+          detailCardBodies.whatIfNet.textContent = utils.formatCurrencyThousands(result.netDelta || 0);
         }
       };
 
