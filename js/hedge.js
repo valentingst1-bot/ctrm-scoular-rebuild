@@ -30,6 +30,7 @@
         label: commodity,
         data: [physicalNormalized],
         backgroundColor: utils.getCommodityColor(commodity),
+        slug: utils.slug(commodity),
         commodityData: { // Store extra data for tooltip
           physical: physicalQty,
           hedged: hedgedQty,
@@ -81,8 +82,8 @@
         onClick: (event, elements) => {
           if (elements.length > 0) {
             const datasetIndex = elements[0].datasetIndex;
-            const commodity = datasets[datasetIndex].label;
-            router.navigate(`#/hedge/${commodity.toLowerCase()}`);
+            const commoditySlug = datasets[datasetIndex].slug;
+            router.navigate(`#/hedge/${commoditySlug}`);
           }
         }
       }

@@ -1,5 +1,6 @@
 (function () {
   const registry = new Map();
+  const utils = window.CTRMUtils;
 
   function mountChart(id, config) {
     const ctx = document.getElementById(id);
@@ -22,7 +23,15 @@
     Array.from(registry.keys()).forEach(destroyChart);
   }
 
-  function mountExposureBar(el, rows) {
+  function resolveElement(elOrId) {
+    if (!elOrId) return null;
+    if (typeof elOrId === 'string') return document.getElementById(elOrId);
+    return elOrId;
+  }
+
+  function mountExposureBar(elOrId, rows, options = {}) {
+    const el = resolveElement(elOrId);
+    if (!el) return null;
     const totalPhysical = rows.reduce((sum, row) => sum + row.physQty, 0);
     const datasets = rows.map(row => {
       const hedgePercent = row.physQty > 0 ? (row.hedgedQty / row.physQty) * 100 : 0;
@@ -30,6 +39,7 @@
         label: row.commodity,
         data: [row.physQty],
         backgroundColor: window.CTRMUtils.getCommodityColor(row.commodity),
+        slug: utils.slug(row.commodity),
         tooltipData: {
           physical: row.physQty.toLocaleString(),
           hedged: row.hedgedQty.toLocaleString(),
@@ -67,14 +77,26 @@
               }
             }
           }
+        },
+        onClick: (event, elements) => {
+          if (typeof options.onSelectCommodity !== 'function') return;
+          if (!elements.length) return;
+          const datasetIndex = elements[0].datasetIndex;
+          const dataset = datasets[datasetIndex];
+          options.onSelectCommodity({
+            commodity: dataset.label,
+            commoditySlug: dataset.slug || utils.slug(dataset.label),
+          });
         }
       }
     });
   }
-  function mountForwardCurve(el, data) {
+  function mountTermStructure(elOrId, data) {
+    const el = resolveElement(elOrId);
+    if (!el) return null;
     const labels = data.map(d => d.month);
     const prices = data.map(d => d.price);
-    mountChart(el.id, {
+    return mountChart(el.id, {
       type: 'line',
       data: {
         labels,
@@ -92,11 +114,17 @@
     });
   }
 
-  function mountExposureLadder(el, data, { onSelectMonth }) {
+  function mountForwardCurve(elOrId, data) {
+    return mountTermStructure(elOrId, data);
+  }
+
+  function mountExposureLadder(elOrId, data, options = {}) {
+    const el = resolveElement(elOrId);
+    if (!el) return null;
     const labels = data.map(d => d.month);
     const datasets = [
-        { label: 'Hedged', data: data.map(d => d.hedged), backgroundColor: '#1ab76c' },
-        { label: 'Unhedged', data: data.map(d => Math.max(0, d.physical - d.hedged)), backgroundColor: '#e03e3e' }
+      { label: 'Hedged', data: data.map(d => d.hedged), backgroundColor: '#1ab76c' },
+      { label: 'Unhedged', data: data.map(d => Math.max(0, d.physical - d.hedged)), backgroundColor: '#e03e3e' }
     ];
 
     const instance = mountChart(el.id, {
@@ -109,24 +137,28 @@
         scales: { x: { stacked: true }, y: { stacked: true } },
         plugins: { legend: { position: 'bottom' } },
         onClick: (e) => {
-            const points = instance.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
-            if (points.length) {
-                const month = labels[points[0].index];
-                onSelectMonth(month);
-            }
+          if (typeof options.onSelectMonth !== 'function') return;
+          const points = instance.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
+          if (points.length) {
+            const month = labels[points[0].index];
+            options.onSelectMonth({ month, dataset: data[points[0].index] });
+          }
         }
       }
     });
+    return instance;
   }
 
-  function mountBasisHistory(el, data) {
+  function mountBasisHistory(elOrId, data) {
+    const el = resolveElement(elOrId);
+    if (!el) return null;
     const colors = ['#004bff', '#1ab76c', '#8a5aff'];
     const datasets = data.datasets.map((ds, i) => ({
       ...ds,
       borderColor: colors[i % colors.length],
       fill: false
     }));
-    mountChart(el.id, {
+    return mountChart(el.id, {
       type: 'line',
       data: {
         labels: data.labels,
@@ -162,6 +194,7 @@
     destroyChart,
     destroyAll,
     mountExposureBar,
+    mountTermStructure,
     mountForwardCurve,
     mountExposureLadder,
     mountBasisHistory,
