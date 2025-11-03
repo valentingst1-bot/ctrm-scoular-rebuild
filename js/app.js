@@ -72,14 +72,6 @@
 
   let detailResizeObserver = null;
 
-  function safeText(selector, value) {
-    if (!selector) return;
-    const el = document.querySelector(selector);
-    if (el) {
-      el.textContent = value;
-    }
-  }
-
   function refreshDetailCharts() {
     if (!ChartJS || typeof ChartJS.getChart !== 'function') return;
     ['chart-term-structure', 'chart-exposure-ladder', 'chart-basis-history', 'chart-whatif'].forEach((id) => {
