@@ -13,6 +13,7 @@
   const router = window.CTRMRouting;
   const charts = window.CTRMCharts;
   const hedge = window.CTRMHedge;
+  const ChartJS = window.Chart;
 
   const snapshotButtons = document.querySelectorAll('.snapshot-toggle .toggle-button');
   const kpiTiles = document.querySelectorAll('.kpi-tile');
@@ -26,8 +27,8 @@
   let lastRouteContext = null;
 
   const hedgeView = views['#/hedge']?.el;
-  const hedgeOverviewContainer = hedgeView?.querySelector('[data-view-mode="overview"]');
-  const hedgeDetailContainer = hedgeView?.querySelector('[data-view-mode="detail"]');
+  const hedgeOverviewContainer = hedgeView?.querySelector('#hedge-overview');
+  const hedgeDetailContainer = hedgeView?.querySelector('#hedge-detail');
   const hedgeActionsCard = hedgeOverviewContainer?.querySelector('[data-role="hedge-actions-card"]');
   const hedgeActionsPlaceholder = document.createElement('div');
   hedgeActionsPlaceholder.dataset.role = 'hedge-actions-placeholder';
@@ -35,12 +36,59 @@
   if (hedgeActionsCard && hedgeActionsCard.parentElement) {
     hedgeActionsCard.parentElement.insertBefore(hedgeActionsPlaceholder, hedgeActionsCard.nextSibling);
   }
+  const hedgeDetailTitle = hedgeDetailContainer?.querySelector('[data-role="hedge-detail-title"]');
+  const hedgeDetailSubtitle = hedgeDetailContainer?.querySelector('[data-role="hedge-detail-subtitle"]');
+  const hedgeDetailPopout = hedgeDetailContainer?.querySelector('[data-role="hedge-popout"]');
+  const hedgeDetailKpis = hedgeDetailContainer?.querySelector('[data-role="hedge-detail-kpis"]');
+  const hedgeDetailTicketSlot = hedgeDetailContainer?.querySelector('[data-role="hedge-ticket-slot"]');
+  const hedgeDetailActionsLog = hedgeDetailContainer?.querySelector('[data-role="actions-log-body"]');
+  const detailCardBodies = hedgeDetailContainer ? {
+    term: hedgeDetailContainer.querySelector('[data-role="term-structure-card"] .card__body'),
+    ladder: hedgeDetailContainer.querySelector('[data-role="exposure-ladder-card"] .card__body'),
+    basis: hedgeDetailContainer.querySelector('[data-role="basis-history-card"] .card__body'),
+    priceStack: hedgeDetailContainer.querySelector('[data-role="price-stack-body"]'),
+    volCorr: hedgeDetailContainer.querySelector('[data-role="vol-corr-body"]'),
+    whatIfCard: hedgeDetailContainer.querySelector('[data-role="what-if-card"]'),
+    whatIfBoard: hedgeDetailContainer.querySelector('#whatif-board'),
+    whatIfBasis: hedgeDetailContainer.querySelector('#whatif-basis'),
+    boardLabel: hedgeDetailContainer.querySelector('[data-role="board-label"]'),
+    basisLabel: hedgeDetailContainer.querySelector('[data-role="basis-label"]'),
+    whatIfChart: hedgeDetailContainer.querySelector('#chart-whatif'),
+  } : {};
   const SYMBOL_TO_COMMODITY = {
     ZS: 'Soybeans',
     ZC: 'Corn',
     ZW: 'Wheat',
     RS: 'Canola',
   };
+
+  let detailResizeObserver = null;
+
+  function refreshDetailCharts() {
+    if (!ChartJS || typeof ChartJS.getChart !== 'function') return;
+    ['chart-term-structure', 'chart-exposure-ladder', 'chart-basis-history', 'chart-whatif'].forEach((id) => {
+      const instance = ChartJS.getChart(id);
+      if (instance && typeof instance.resize === 'function') {
+        instance.resize();
+      }
+    });
+  }
+
+  function ensureDetailResizeObserver() {
+    if (!hedgeDetailContainer || typeof ResizeObserver === 'undefined') return;
+    if (detailResizeObserver) return;
+    detailResizeObserver = new ResizeObserver(() => {
+      refreshDetailCharts();
+    });
+    detailResizeObserver.observe(hedgeDetailContainer);
+  }
+
+  function teardownHedgeDetail() {
+    if (detailResizeObserver) {
+      detailResizeObserver.disconnect();
+      detailResizeObserver = null;
+    }
+  }
 
   const routeHandlers = {
     '#/trader': {
@@ -62,12 +110,18 @@
     },
     '#/hedge': {
       render: renderHedge,
-      destroy: hedge.destroy,
+      destroy: () => {
+        teardownHedgeDetail();
+        hedge.destroy();
+      },
     },
     '#/hedge/:commodity': {
-        render: renderHedge,
-        destroy: hedge.destroy,
-        view: '#/hedge',
+      render: renderHedge,
+      destroy: () => {
+        teardownHedgeDetail();
+        hedge.destroy();
+      },
+      view: '#/hedge',
     },
     '#/risk': {
       render: renderRisk,
@@ -611,6 +665,7 @@
     if (isDetailView) {
       renderHedgeDetail({ commoditySlug: context.params.commodity });
     } else {
+      teardownHedgeDetail();
       restoreActionsTicket();
       renderHedgeOverview();
     }
@@ -639,18 +694,21 @@
         <td>${row.unhedgedQty.toLocaleString()}</td>
         <td>${row.nextMonth}</td>
         <td>${avgBasis}</td>
-        <td><button class="btn open-hedge" data-commodity-slug="${commoditySlug}">Open Hedge</button></td>
+        <td><a class="open-hedge" href="#/hedge/${commoditySlug}" target="_blank" rel="noopener">Open Hedge</a></td>
       `;
       tbody.appendChild(tr);
     });
 
     if (!hedgeOverviewContainer.dataset.listenerAttached) {
       hedgeOverviewContainer.addEventListener('click', (event) => {
-        const button = event.target.closest('.open-hedge');
+        const link = event.target.closest('a.open-hedge');
+        if (link) return;
+
         const row = event.target.closest('tr[data-commodity-slug]');
-        if (!button && !row) return;
+        if (!row) return;
+
         event.preventDefault();
-        const commoditySlug = button ? button.dataset.commoditySlug : row.dataset.commoditySlug;
+        const commoditySlug = row.dataset.commoditySlug;
         if (commoditySlug) {
           router.navigate(`#/hedge/${commoditySlug}`);
         }
@@ -668,87 +726,38 @@
   function renderHedgeDetail({ commoditySlug }) {
     if (!hedgeDetailContainer) return;
     const commodityName = utils.unslug(commoditySlug);
-    const displayName = commodityName || commoditySlug;
+    const displayName = commodityName || utils.toTitleCase?.(commoditySlug) || commoditySlug;
+    const previousSlug = hedgeDetailContainer.dataset.activeSlug;
+    hedgeDetailContainer.dataset.activeSlug = commoditySlug;
 
-    hedgeDetailContainer.innerHTML = `
-      <div class="detail-header" data-role="hedge-detail-header">
-        <a href="#/hedge" class="back-link">&larr; Back to Overview</a>
-        <div class="detail-header__main">
-          <h2>${displayName} Hedge Detail</h2>
-        </div>
-        <div class="kpi-strip kpi-strip--mini" data-role="hedge-detail-kpis">
-          <article class="kpi-tile kpi-tile--mini"><h3>Physical</h3><p data-kpi="physQty">--</p></article>
-          <article class="kpi-tile kpi-tile--mini"><h3>Hedged</h3><p data-kpi="hedgedQty">--</p></article>
-          <article class="kpi-tile kpi-tile--mini"><h3>Hedge %</h3><p data-kpi="hedgePercent">--</p></article>
-          <article class="kpi-tile kpi-tile--mini"><h3>Unhedged</h3><p data-kpi="unhedgedQty">--</p></article>
-          <article class="kpi-tile kpi-tile--mini"><h3>MTM</h3><p data-kpi="mtm">--</p></article>
-          <article class="kpi-tile kpi-tile--mini"><h3>Basis P&L</h3><p data-kpi="basisPL">--</p></article>
-          <article class="kpi-tile kpi-tile--mini"><h3>Futures P&L</h3><p data-kpi="futuresPL">--</p></article>
-        </div>
-      </div>
-      <div class="view-grid hedge-detail-grid">
-        <div data-role="hedge-ticket-slot"></div>
-        <div class="hedge-detail-analytics-grid">
-          <section class="card" data-role="term-structure-card">
-            <header class="card__header"><h3>Term Structure</h3></header>
-            <div class="card__body">
-              <canvas id="chart-term-structure" height="220"></canvas>
-              <p class="no-data" hidden>No data</p>
-            </div>
-          </section>
-          <section class="card" data-role="exposure-ladder-card">
-            <header class="card__header"><h3>Exposure Ladder</h3></header>
-            <div class="card__body">
-              <canvas id="chart-exposure-ladder" height="220"></canvas>
-              <p class="no-data" hidden>No data</p>
-            </div>
-          </section>
-          <section class="card" data-role="basis-history-card">
-            <header class="card__header"><h3>Basis History</h3></header>
-            <div class="card__body">
-              <canvas id="chart-basis-history" height="220"></canvas>
-              <p class="no-data" hidden>No data</p>
-            </div>
-          </section>
-          <section class="card" data-role="price-stack-card">
-            <header class="card__header"><h3>Price Stack</h3></header>
-            <div class="card__body" data-role="price-stack-body"><p class="no-data">No data</p></div>
-          </section>
-          <section class="card" data-role="vol-corr-card">
-            <header class="card__header"><h3>Vol &amp; Correlation</h3></header>
-            <div class="card__body" data-role="vol-corr-body"><p class="no-data">No data</p></div>
-          </section>
-          <section class="card" data-role="what-if-card">
-            <header class="card__header"><h3>What-If Simulator</h3></header>
-            <div class="card__body">
-              <div class="form-group--slider">
-                <label for="whatif-board">Board Shock (%)</label>
-                <input type="range" id="whatif-board" name="boardShock" min="-3" max="3" value="0" step="0.1">
-                <span class="value-label" data-role="board-label">0.0%</span>
-              </div>
-              <div class="form-group--slider">
-                <label for="whatif-basis">Basis Shock (¢)</label>
-                <input type="range" id="whatif-basis" name="basisShock" min="-30" max="30" value="0" step="1">
-                <span class="value-label" data-role="basis-label">0¢</span>
-              </div>
-              <canvas id="chart-whatif" height="100"></canvas>
-            </div>
-          </section>
-        </div>
-      </div>
-      <div class="card full-width" data-role="actions-log-card">
-         <header class="card__header"><h3>Actions Log: ${displayName}</h3> <button class="btn btn-secondary btn-sm">Export CSV</button></header>
-         <div class="card__body" data-role="actions-log-body"></div>
-      </div>
-    `;
+    if (previousSlug !== commoditySlug) {
+      window.scrollTo(0, 0);
+    }
+    ensureDetailResizeObserver();
 
-    const ticketSlot = hedgeDetailContainer.querySelector('[data-role="hedge-ticket-slot"]');
-    if (ticketSlot && hedgeActionsCard) {
-      ticketSlot.innerHTML = '';
-      ticketSlot.appendChild(hedgeActionsCard);
+    if (hedgeDetailTitle) {
+      hedgeDetailTitle.textContent = `${displayName} Hedge Detail`;
+    }
+    if (hedgeDetailSubtitle) {
+      hedgeDetailSubtitle.textContent = `Live analytics for ${displayName}`;
+    }
+    if (hedgeDetailPopout) {
+      hedgeDetailPopout.href = `#/hedge/${commoditySlug}`;
+      hedgeDetailPopout.setAttribute('aria-label', `Open ${displayName} hedge detail in a new window`);
+    }
+
+    if (hedgeDetailTicketSlot && hedgeActionsCard) {
+      hedgeDetailTicketSlot.innerHTML = '';
+      hedgeDetailTicketSlot.appendChild(hedgeActionsCard);
     }
 
     const formEl = prepareTicketForCommodity(commodityName || displayName);
+
+    if (hedgeDetailKpis) {
+      hedgeDetailKpis.querySelectorAll('[data-kpi]').forEach((el) => {
+        el.textContent = '--';
+      });
+    }
 
     const headerDefaults = {
       physQty: 0,
@@ -761,39 +770,38 @@
     };
     const headerData = data.getHedgeDetailHeader?.(commodityName) || {};
     const headerValues = { ...headerDefaults, ...headerData };
-    const kpiStrip = hedgeDetailContainer.querySelector('[data-role="hedge-detail-kpis"]');
-    Object.entries(headerValues).forEach(([key, value]) => {
-      const el = kpiStrip?.querySelector(`[data-kpi="${key}"]`);
-      if (!el) return;
-      if (key.includes('Percent')) {
-        el.textContent = utils.formatPercent(value);
-      } else if (key.includes('PL') || key === 'mtm') {
-        el.textContent = utils.formatCurrency(value);
-      } else if (typeof value === 'number') {
-        el.textContent = value.toLocaleString();
-      } else {
-        el.textContent = value || '--';
-      }
-    });
+    if (hedgeDetailKpis) {
+      Object.entries(headerValues).forEach(([key, value]) => {
+        const el = hedgeDetailKpis.querySelector(`[data-kpi="${key}"]`);
+        if (!el) return;
+        if (key.includes('Percent')) {
+          el.textContent = utils.formatPercent(value);
+        } else if (key.includes('PL') || key === 'mtm') {
+          el.textContent = utils.formatCurrency(value);
+        } else if (typeof value === 'number') {
+          el.textContent = value.toLocaleString();
+        } else {
+          el.textContent = value || '--';
+        }
+      });
+    }
 
-    function toggleNoData(bodyEl, hasData) {
+    const toggleNoData = (bodyEl, hasData) => {
       if (!bodyEl) return;
       const canvas = bodyEl.querySelector('canvas');
       const caption = bodyEl.querySelector('.no-data');
       if (canvas) canvas.hidden = !hasData;
       if (caption) caption.hidden = !!hasData;
-    }
+    };
 
-    const termBody = hedgeDetailContainer.querySelector('[data-role="term-structure-card"] .card__body');
     const fwd = data.getForwardCurve?.(commodityName) || [];
-    toggleNoData(termBody, fwd.length > 0);
+    toggleNoData(detailCardBodies.term, fwd.length > 0);
     if (fwd.length) {
       charts.mountTermStructure('chart-term-structure', fwd);
     }
 
-    const ladderBody = hedgeDetailContainer.querySelector('[data-role="exposure-ladder-card"] .card__body');
     const ladder = data.getExposureByMonth?.(commodityName) || [];
-    toggleNoData(ladderBody, ladder.length > 0);
+    toggleNoData(detailCardBodies.ladder, ladder.length > 0);
     if (ladder.length) {
       charts.mountExposureLadder('chart-exposure-ladder', ladder, {
         onSelectMonth: ({ month }) => {
@@ -812,10 +820,9 @@
       });
     }
 
-    const basisBody = hedgeDetailContainer.querySelector('[data-role="basis-history-card"] .card__body');
     const basisByZone = data.getBasisHistory?.(commodityName) || {};
     const basisEntries = Object.entries(basisByZone || {}).filter(([, values]) => Array.isArray(values) && values.length > 0);
-    toggleNoData(basisBody, basisEntries.length > 0);
+    toggleNoData(detailCardBodies.basis, basisEntries.length > 0);
     if (basisEntries.length) {
       const labels = basisEntries[0][1].map((point) => new Date(point.date).toLocaleString('default', { month: 'short' }));
       const datasets = basisEntries.map(([zone, values]) => ({
@@ -826,10 +833,9 @@
     }
 
     const priceStack = data.getPriceStack?.(commodityName) || [];
-    const priceStackBody = hedgeDetailContainer.querySelector('[data-role="price-stack-body"]');
-    if (priceStackBody) {
+    if (detailCardBodies.priceStack) {
       if (priceStack.length) {
-        priceStackBody.innerHTML = priceStack
+        detailCardBodies.priceStack.innerHTML = priceStack
           .map((entry) => {
             const board = typeof entry.board === 'number' ? entry.board.toFixed(2) : entry.board;
             const point = typeof entry.point === 'number' ? entry.point.toFixed(2) : entry.point;
@@ -839,45 +845,45 @@
           })
           .join('');
       } else {
-        priceStackBody.innerHTML = '<p class="no-data">No data</p>';
+        detailCardBodies.priceStack.innerHTML = '<p class="no-data">No data available</p>';
       }
     }
 
-    const volCorrBody = hedgeDetailContainer.querySelector('[data-role="vol-corr-body"]');
-    const vols = data.getVolCorrelation?.(commodityName) || data.getVolAndCorr?.(commodityName) || { vol30: 0, corr: 0 };
-    if (volCorrBody) {
+    if (detailCardBodies.volCorr) {
+      const vols = data.getVolCorrelation?.(commodityName) || data.getVolAndCorr?.(commodityName) || { vol30: 0, corr: 0 };
       const volDisplay = vols.volatility || (typeof vols.vol30 === 'number' ? `${vols.vol30}%` : vols.vol30 || '0%');
       const corrRaw = vols.correlation ?? vols.corr ?? 0;
       const corrDisplay = typeof corrRaw === 'number' ? corrRaw.toFixed(2) : corrRaw;
-      volCorrBody.innerHTML = `<p>30d Vol: <strong>${volDisplay}</strong></p><p>90d Corr: <strong>${corrDisplay}</strong></p>`;
+      detailCardBodies.volCorr.innerHTML = `
+        <p>30d Vol: <strong>${volDisplay}</strong></p>
+        <p>90d Corr: <strong>${corrDisplay}</strong></p>
+      `;
     }
 
-    const whatIfCard = hedgeDetailContainer.querySelector('[data-role="what-if-card"]');
-    if (whatIfCard) {
-      const boardSlider = whatIfCard.querySelector('#whatif-board');
-      const basisSlider = whatIfCard.querySelector('#whatif-basis');
-      const boardLabel = whatIfCard.querySelector('[data-role="board-label"]');
-      const basisLabel = whatIfCard.querySelector('[data-role="basis-label"]');
-      const chartEl = whatIfCard.querySelector('#chart-whatif');
+    if (detailCardBodies.whatIfCard) {
+      if (detailCardBodies.whatIfBoard) detailCardBodies.whatIfBoard.value = '0';
+      if (detailCardBodies.whatIfBasis) detailCardBodies.whatIfBasis.value = '0';
 
       const updateSimulator = () => {
-        const boardPct = parseFloat(boardSlider?.value || '0');
-        const basisCents = parseInt(basisSlider?.value || '0', 10);
-        if (boardLabel) boardLabel.textContent = `${boardPct.toFixed(1)}%`;
-        if (basisLabel) basisLabel.textContent = `${basisCents}¢`;
-        if (chartEl) {
+        const boardPct = parseFloat(detailCardBodies.whatIfBoard?.value || '0');
+        const basisCents = parseInt(detailCardBodies.whatIfBasis?.value || '0', 10);
+        if (detailCardBodies.boardLabel) detailCardBodies.boardLabel.textContent = `${boardPct.toFixed(1)}%`;
+        if (detailCardBodies.basisLabel) detailCardBodies.basisLabel.textContent = `${basisCents}¢`;
+        if (detailCardBodies.whatIfChart) {
           const res = data.simulateShock({ commodity: commodityName, boardPct, basisCents });
-          charts.mountWhatIf(chartEl, res);
+          charts.mountWhatIf(detailCardBodies.whatIfChart, res);
         }
       };
 
-      if (boardSlider && basisSlider) {
-        whatIfCard.addEventListener('input', (event) => {
-          if (event.target === boardSlider || event.target === basisSlider) {
+      if (!detailCardBodies.whatIfCard.dataset.listenerAttached && detailCardBodies.whatIfCard.addEventListener) {
+        detailCardBodies.whatIfCard.addEventListener('input', (event) => {
+          if (event.target === detailCardBodies.whatIfBoard || event.target === detailCardBodies.whatIfBasis) {
             updateSimulator();
           }
         });
+        detailCardBodies.whatIfCard.dataset.listenerAttached = 'true';
       }
+
       updateSimulator();
     }
 
@@ -886,10 +892,9 @@
     }
 
     const actionsLogData = data.getActionsLog?.(commodityName) || [];
-    const actionsLogContainer = hedgeDetailContainer.querySelector('[data-role="actions-log-body"]');
-    if (actionsLogContainer) {
+    if (hedgeDetailActionsLog) {
       if (actionsLogData.length > 0) {
-        actionsLogContainer.innerHTML = `
+        hedgeDetailActionsLog.innerHTML = `
           <table class="data-table">
             <thead><tr><th>Timestamp</th><th>Action</th><th>Month</th><th>%/Qty</th><th>Δ P&L</th></tr></thead>
             <tbody>
@@ -908,9 +913,13 @@
           </table>
         `;
       } else {
-        actionsLogContainer.innerHTML = `<p>No actions logged for ${displayName} yet.</p>`;
+        hedgeDetailActionsLog.innerHTML = `<p>No actions logged for ${displayName} yet.</p>`;
       }
     }
+
+    requestAnimationFrame(() => {
+      refreshDetailCharts();
+    });
   }
 
   function renderRisk() {

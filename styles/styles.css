@@ -225,6 +225,161 @@ body {
   align-items: start;
 }
 
+#hedge-detail[hidden] {
+  display: none !important;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+  margin-bottom: 12px;
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+  text-decoration: underline;
+}
+
+.hedge-detail-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.hedge-detail-header__main h2 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.hedge-detail-header__main p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+}
+
+.hedge-detail-header__popout {
+  font-size: 0.9rem;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.hedge-detail-header__popout:hover,
+.hedge-detail-header__popout:focus-visible {
+  text-decoration: underline;
+}
+
+.kpi-strip--mini {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  margin-top: 8px;
+}
+
+.kpi-tile--mini {
+  padding: 14px;
+}
+
+.kpi-tile--mini h3 {
+  font-size: 0.8rem;
+}
+
+.kpi-tile--mini .kpi-value,
+.kpi-tile--mini p {
+  font-size: 1.1rem;
+}
+
+.hedge-detail {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  grid-template-areas:
+    "ticket charts"
+    "ticket charts"
+    "ticket log";
+  gap: 16px;
+  align-items: start;
+}
+
+.hedge-detail__ticket {
+  grid-area: ticket;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 12px;
+}
+
+.hedge-detail__ticket > * {
+  width: 100%;
+}
+
+.hedge-detail__charts {
+  grid-area: charts;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.hedge-detail__charts .card {
+  min-height: 300px;
+}
+
+.hedge-detail__charts .card[data-role="price-stack-card"],
+.hedge-detail__charts .card[data-role="vol-corr-card"],
+.hedge-detail__charts .card[data-role="what-if-card"] {
+  min-height: 280px;
+}
+
+.hedge-detail__log {
+  grid-area: log;
+}
+
+.card__header--split {
+  align-items: baseline;
+  gap: 12px;
+}
+
+.card__unit {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+#hedge-detail .no-data {
+  margin: 16px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.value-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 1400px) {
+  .hedge-detail__charts {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1100px) {
+  .hedge-detail {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "ticket"
+      "charts"
+      "log";
+  }
+
+  .hedge-detail__ticket {
+    position: static;
+  }
+}
+
 .card {
   background: var(--bg-surface);
   border-radius: 22px;
