@@ -93,6 +93,24 @@
     return COMMODITY_COLORS[commodity] || COMMODITY_COLORS.Other;
   }
 
+  function slug(value = '') {
+    return value
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-');
+  }
+
+  function unslug(value = '') {
+    return value
+      .toString()
+      .trim()
+      .split('-')
+      .filter(Boolean)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
   window.CTRMUtils = {
     formatMillions,
     formatCurrency,
@@ -103,5 +121,7 @@
     createElement,
     showToast,
     getCommodityColor,
+    slug,
+    unslug,
   };
 })();

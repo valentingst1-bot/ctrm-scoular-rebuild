@@ -1,31 +1,33 @@
 (function () {
   const listeners = new Set();
-  const routes = [
-    { pattern: /#\/hedge\/(\w+)/, name: '#/hedge/:commodity' }
+  const paramRoutes = [
+    { pattern: /^#\/hedge\/([\w-]+)$/i, path: '#/hedge/:commodity', params: ['commodity'] },
   ];
 
-  function resolve(hash) {
-    for (const route of routes) {
-      const match = hash.match(route.pattern);
+  function parseRoute(hash) {
+    const currentHash = hash || window.location.hash || '#/trader';
+    for (const route of paramRoutes) {
+      const match = currentHash.match(route.pattern);
       if (match) {
-        return {
-          name: route.name,
-          params: { commodity: match[1] },
-          hash: hash
-        };
+        const params = route.params.reduce((acc, key, index) => {
+          const value = match[index + 1];
+          acc[key] = key === 'commodity' ? value.toLowerCase() : value;
+          return acc;
+        }, {});
+        return { path: route.path, params, hash: currentHash };
       }
     }
-    return { name: hash, params: {}, hash: hash };
+    return { path: currentHash, params: {}, hash: currentHash };
   }
 
   function notify(hash) {
-    const context = resolve(hash);
+    const context = parseRoute(hash);
     listeners.forEach((handler) => handler(context));
   }
 
   function subscribe(handler) {
     listeners.add(handler);
-    handler(resolve(window.location.hash || '#/trader'));
+    handler(parseRoute(window.location.hash || '#/trader'));
     return () => listeners.delete(handler);
   }
 
@@ -42,5 +44,6 @@
   window.CTRMRouting = {
     subscribe,
     navigate,
+    parseRoute,
   };
 })();
