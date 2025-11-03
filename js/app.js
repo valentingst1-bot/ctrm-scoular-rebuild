@@ -630,12 +630,7 @@
       const commoditySlug = utils.slug(row.commodity);
       const hedgePercent = row.physQty > 0 ? (row.hedgedQty / row.physQty) * 100 : 0;
       const avgBasis = typeof row.avgBasis === 'number' ? row.avgBasis.toFixed(2) : '--';
-      const tr = utils.createElement('tr', {
-        attrs: {
-          'data-commodity-slug': commoditySlug,
-          tabindex: '0',
-        }
-      });
+      const tr = utils.createElement('tr', { attrs: { 'data-commodity-slug': commoditySlug } });
       tr.innerHTML = `
         <td>${row.commodity}</td>
         <td>${row.physQty.toLocaleString()}</td>
@@ -644,28 +639,22 @@
         <td>${row.unhedgedQty.toLocaleString()}</td>
         <td>${row.nextMonth}</td>
         <td>${avgBasis}</td>
-        <td><a class="open-hedge" href="#/hedge/${commoditySlug}" target="_blank" rel="noopener" data-commodity-slug="${commoditySlug}">Open Hedge</a></td>
+        <td><button class="btn open-hedge" data-commodity-slug="${commoditySlug}">Open Hedge</button></td>
       `;
 
-      tr.addEventListener('click', (event) => {
-        if (event.target.closest('a.open-hedge')) {
-          return;
-        }
-        router.navigate(`#/hedge/${commoditySlug}`);
-      });
-
-      tr.addEventListener('keydown', (event) => {
-        if (event.target.closest('a.open-hedge')) {
-          return;
-        }
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
+    if (!hedgeOverviewContainer.dataset.listenerAttached) {
+      hedgeOverviewContainer.addEventListener('click', (event) => {
+        const button = event.target.closest('.open-hedge');
+        const row = event.target.closest('tr[data-commodity-slug]');
+        if (!button && !row) return;
+        event.preventDefault();
+        const commoditySlug = button ? button.dataset.commoditySlug : row.dataset.commoditySlug;
+        if (commoditySlug) {
           router.navigate(`#/hedge/${commoditySlug}`);
         }
       });
-
-      tbody.appendChild(tr);
-    });
+      hedgeOverviewContainer.dataset.listenerAttached = 'true';
+    }
 
     const formEl = document.getElementById('hedgeForm');
     if (formEl) {
