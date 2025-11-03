@@ -740,11 +740,18 @@
     const forwardCurveData = data.getForwardCurve(commodity);
     charts.mountForwardCurveChart(detailView.querySelector('#chart-forward-curve'), forwardCurveData);
 
-    const exposureLadderData = data.getExposureLadder(commodity);
+    const exposureLadderData = data.getExposureByMonth(commodity);
     charts.mountExposureLadderChart(detailView.querySelector('#chart-exposure-ladder'), exposureLadderData);
 
     const basisHistoryData = data.getBasisHistory(commodity);
-    charts.mountBasisHistoryChart(detailView.querySelector('#chart-basis-history'), basisHistoryData);
+    const basisChartData = {
+        labels: basisHistoryData[Object.keys(basisHistoryData)[0]].map(d => new Date(d.date).toLocaleString('default', { month: 'short' })),
+        datasets: Object.entries(basisHistoryData).map(([zone, data]) => ({
+            label: zone,
+            data: data.map(d => d.basis)
+        }))
+    };
+    charts.mountBasisHistoryChart(detailView.querySelector('#chart-basis-history'), basisChartData);
 
     const priceStackData = data.getPriceStack(commodity);
     const priceStackContainer = detailView.querySelector('[data-role="price-stack-viz"]');
@@ -775,15 +782,16 @@
     const basisSlider = simulator.querySelector('[name="basisShock"]');
 
     function updateSimulator() {
-        const boardShock = parseFloat(boardSlider.value);
-        const basisShock = parseInt(basisSlider.value);
-        simulator.querySelector('.value-label:nth-of-type(1)').textContent = `${boardShock.toFixed(1)}%`;
-        simulator.querySelector('.value-label:nth-of-type(2)').textContent = `${basisShock}¢`;
+        const boardPct = parseFloat(boardSlider.value);
+        const basisCents = parseInt(basisSlider.value);
+        simulator.querySelector('.value-label:nth-of-type(1)').textContent = `${boardPct.toFixed(1)}%`;
+        simulator.querySelector('.value-label:nth-of-type(2)').textContent = `${basisCents}¢`;
 
-        const unhedged = data.getHedgeDetailHeader(commodity).unhedgedQty;
-        const futuresDelta = unhedged * (boardShock/100) * 5.10 * -1; // Simplified
-        const basisDelta = unhedged * (basisShock/100);
-        const netDelta = futuresDelta + basisDelta;
+        const { futuresDelta, basisDelta, netDelta } = data.simulateShock({
+            commodity,
+            boardPct,
+            basisCents
+        });
 
         const results = simulator.querySelector('[data-role="what-if-results"]');
         results.querySelector('span:nth-of-type(1)').textContent = `Δ Futures P&L: ${utils.formatCurrency(futuresDelta)}`;
