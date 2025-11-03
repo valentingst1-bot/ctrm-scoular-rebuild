@@ -257,9 +257,11 @@ body {
   font-size: 1.6rem;
 }
 
-.hedge-detail-header__main p {
+.hedge-detail-header__subtitle {
   margin: 4px 0 0;
   color: var(--text-secondary);
+  font-size: 0.95rem;
+  font-weight: 400;
 }
 
 .hedge-detail-header__popout {
@@ -295,22 +297,23 @@ body {
 
 .hedge-detail {
   display: grid;
-  grid-template-columns: 360px 1fr;
-  grid-template-areas:
-    "ticket charts"
-    "ticket charts"
-    "ticket log";
-  gap: 16px;
+  grid-template-columns: 1fr;
+  gap: 24px;
   align-items: start;
+  margin-top: 24px;
+}
+
+.hedge-detail__ticket,
+.hedge-detail__charts,
+.hedge-detail__log {
+  grid-column: 1 / -1;
 }
 
 .hedge-detail__ticket {
-  grid-area: ticket;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  position: sticky;
-  top: 12px;
+  gap: 20px;
+  position: static;
 }
 
 .hedge-detail__ticket > * {
@@ -318,10 +321,9 @@ body {
 }
 
 .hedge-detail__charts {
-  grid-area: charts;
   display: grid;
-  grid-template-columns: repeat(2, minmax(320px, 1fr));
-  gap: 16px;
+  gap: 20px;
+  grid-template-columns: 1fr;
 }
 
 .hedge-detail__charts .card {
@@ -403,23 +405,54 @@ body {
   color: var(--text-secondary);
 }
 
-@media (max-width: 1400px) {
-  .hedge-detail__charts {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 1100px) {
+@media (min-width: 768px) {
   .hedge-detail {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "ticket"
-      "charts"
-      "log";
+    grid-template-columns: clamp(240px, 28vw, 300px) minmax(0, 1fr);
   }
 
   .hedge-detail__ticket {
-    position: static;
+    grid-column: 1 / span 1;
+  }
+
+  .hedge-detail__charts {
+    grid-column: 2 / span 1;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .hedge-detail__log {
+    grid-column: 1 / span 1;
+  }
+
+  .hedge-detail__charts .card {
+    grid-column: span 12;
+  }
+
+  .hedge-detail__charts .card[data-role="vol-corr-card"],
+  .hedge-detail__charts .card[data-role="what-if-card"] {
+    grid-column: span 6;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hedge-detail {
+    grid-template-columns: clamp(260px, 25vw, 320px) minmax(0, 1fr);
+  }
+
+  .hedge-detail__ticket {
+    position: sticky;
+    top: 16px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .hedge-detail__charts .card[data-role="term-structure-card"],
+  .hedge-detail__charts .card[data-role="basis-history-card"] {
+    grid-column: span 7;
+  }
+
+  .hedge-detail__charts .card[data-role="exposure-ladder-card"],
+  .hedge-detail__charts .card[data-role="price-stack-card"] {
+    grid-column: span 5;
   }
 }
 
