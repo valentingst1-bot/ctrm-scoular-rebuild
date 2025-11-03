@@ -71,7 +71,7 @@
       }
     });
   }
-  function mountForwardCurveChart(el, data) {
+  function mountForwardCurve(el, data) {
     const labels = data.map(d => d.month);
     const prices = data.map(d => d.price);
     mountChart(el.id, {
@@ -92,14 +92,14 @@
     });
   }
 
-  function mountExposureLadderChart(el, data) {
+  function mountExposureLadder(el, data, { onSelectMonth }) {
     const labels = data.map(d => d.month);
     const datasets = [
         { label: 'Hedged', data: data.map(d => d.hedged), backgroundColor: '#1ab76c' },
         { label: 'Unhedged', data: data.map(d => Math.max(0, d.physical - d.hedged)), backgroundColor: '#e03e3e' }
     ];
 
-    mountChart(el.id, {
+    const instance = mountChart(el.id, {
       type: 'bar',
       data: {
         labels,
@@ -107,12 +107,19 @@
       },
       options: {
         scales: { x: { stacked: true }, y: { stacked: true } },
-        plugins: { legend: { position: 'bottom' } }
+        plugins: { legend: { position: 'bottom' } },
+        onClick: (e) => {
+            const points = instance.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
+            if (points.length) {
+                const month = labels[points[0].index];
+                onSelectMonth(month);
+            }
+        }
       }
     });
   }
 
-  function mountBasisHistoryChart(el, data) {
+  function mountBasisHistory(el, data) {
     const colors = ['#004bff', '#1ab76c', '#8a5aff'];
     const datasets = data.datasets.map((ds, i) => ({
       ...ds,
@@ -132,13 +139,32 @@
     });
   }
 
+  function mountWhatIf(el, data) {
+      mountChart(el.id, {
+          type: 'bar',
+          data: {
+              labels: ['Futures Δ', 'Basis Δ', 'Net Δ'],
+              datasets: [{
+                  data: [data.futuresDelta, data.basisDelta, data.netDelta],
+                  backgroundColor: ['#004bff', '#1ab76c', '#ff8c42']
+              }]
+          },
+          options: {
+              indexAxis: 'y',
+              plugins: { legend: { display: false } },
+              scales: { x: { ticks: { callback: v => utils.formatCurrency(v, 0) } } }
+          }
+      });
+  }
+
   window.CTRMCharts = {
     mountChart,
     destroyChart,
     destroyAll,
     mountExposureBar,
-    mountForwardCurveChart,
-    mountExposureLadderChart,
-    mountBasisHistoryChart,
+    mountForwardCurve,
+    mountExposureLadder,
+    mountBasisHistory,
+    mountWhatIf,
   };
 })();
