@@ -71,10 +71,72 @@
       }
     });
   }
+  function mountForwardCurveChart(el, data) {
+    const labels = data.map(d => d.month);
+    const prices = data.map(d => d.price);
+    mountChart(el.id, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Futures Price',
+          data: prices,
+          borderColor: '#004bff',
+          tension: 0.1
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: { y: { ticks: { callback: v => `$${v.toFixed(2)}` } } }
+      }
+    });
+  }
+
+  function mountExposureLadderChart(el, data) {
+    const labels = data.map(d => d.month);
+    mountChart(el.id, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Hedged', data: data.map(d => d.hedged), backgroundColor: '#1ab76c' },
+          { label: 'Unhedged', data: data.map(d => d.unhedged), backgroundColor: '#e03e3e' }
+        ]
+      },
+      options: {
+        scales: { x: { stacked: true }, y: { stacked: true } },
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+  }
+
+  function mountBasisHistoryChart(el, data) {
+    const colors = ['#004bff', '#1ab76c', '#8a5aff'];
+    const datasets = data.datasets.map((ds, i) => ({
+      ...ds,
+      borderColor: colors[i % colors.length],
+      fill: false
+    }));
+    mountChart(el.id, {
+      type: 'line',
+      data: {
+        labels: data.labels,
+        datasets
+      },
+      options: {
+        plugins: { legend: { position: 'bottom' } },
+        scales: { y: { ticks: { callback: v => `${v.toFixed(2)}` } } }
+      }
+    });
+  }
+
   window.CTRMCharts = {
     mountChart,
     destroyChart,
     destroyAll,
     mountExposureBar,
+    mountForwardCurveChart,
+    mountExposureLadderChart,
+    mountBasisHistoryChart,
   };
 })();

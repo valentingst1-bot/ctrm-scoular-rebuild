@@ -49,6 +49,7 @@
     '#/hedge/:commodity': {
         render: renderHedge,
         destroy: hedge.destroy,
+        view: '#/hedge',
     },
     '#/risk': {
       render: renderRisk,
@@ -159,21 +160,31 @@
   }
 
   function activateRoute(route, ctx) {
+    const handler = routeHandlers[route];
+    const viewRoute = handler?.view || route;
+
     if (activeRoute === route) {
       renderActiveView(ctx);
       return;
     }
+
     if (activeRoute && routeHandlers[activeRoute]?.destroy) {
       routeHandlers[activeRoute].destroy();
     }
+
     Object.values(views).forEach((view) => view.el.setAttribute('hidden', ''));
-    const nextView = views[route] || views['#/trader'];
-    nextView.el.removeAttribute('hidden');
+    const nextView = views[viewRoute] || views['#/trader'];
+    if (nextView) {
+      nextView.el.removeAttribute('hidden');
+    }
+
     activeRoute = route;
+
     navLinks.forEach((link) => {
-      const isActive = link.dataset.route === route;
+      const isActive = link.dataset.route === viewRoute;
       link.classList.toggle('is-active', isActive);
     });
+
     renderActiveView(ctx);
   }
 
@@ -585,16 +596,236 @@
       });
       overviewContainer.dataset.listenerAttached = 'true';
     }
+
+    const formEl = document.getElementById('hedgeForm');
+    updateHedgeFormUI(formEl);
+    validateAndPreviewHedgeForm(formEl);
   }
 
   function renderHedgeDetail(commodity) {
     const detailView = document.querySelector('[data-view-mode="detail"]');
+    const commodityTitle = commodity.charAt(0).toUpperCase() + commodity.slice(1);
+
     detailView.innerHTML = `
-        <div class="card full-width">
-            <h2>${commodity.charAt(0).toUpperCase() + commodity.slice(1)} Hedge Detail</h2>
-            <p>Details about the ${commodity} hedge will be displayed here.</p>
+      <div class="detail-header">
+        <a href="#/hedge" class="back-link">&larr; Back to Overview</a>
+        <div class="detail-header__main">
+          <h2>${commodityTitle} Hedge Detail</h2>
         </div>
+        <div class="kpi-strip kpi-strip--mini" data-role="detail-kpis">
+          <article class="kpi-tile kpi-tile--mini"><h3>Physical</h3><p data-kpi="physQty">--</p></article>
+          <article class="kpi-tile kpi-tile--mini"><h3>Hedged</h3><p data-kpi="hedgedQty">--</p></article>
+          <article class="kpi-tile kpi-tile--mini"><h3>Hedge %</h3><p data-kpi="hedgePercent">--</p></article>
+          <article class="kpi-tile kpi-tile--mini"><h3>Unhedged</h3><p data-kpi="unhedgedQty">--</p></article>
+          <article class="kpi-tile kpi-tile--mini"><h3>MTM</h3><p data-kpi="mtm">--</p></article>
+          <article class="kpi-tile kpi-tile--mini"><h3>Basis P&L</h3><p data-kpi="basisPL">--</p></article>
+          <article class="kpi-tile kpi-tile--mini"><h3>Futures P&L</h3><p data-kpi="futuresPL">--</p></article>
+        </div>
+      </div>
+      <div class="view-grid hedge-detail-grid">
+        <div class="card" data-role="action-ticket-container">
+          <header class="card__header"><h3>Action Ticket</h3></header>
+          <div class="card__body">
+            <form id="hedgeFormDetail" class="hedge-form">
+              <div class="form-group" role="radiogroup" aria-labelledby="action-type-label-detail">
+                <span id="action-type-label-detail" class="form-label">Action</span>
+                <div class="form-group--radios">
+                  <label><input type="radio" name="actionType" value="hedge" checked> Hedge</label>
+                  <label><input type="radio" name="actionType" value="roll"> Roll</label>
+                </div>
+              </div>
+              <div data-form-group="commodity">
+                <label class="form-label" for="commoditySelectDetail">Commodity</label>
+                <select id="commoditySelectDetail" name="commodity" disabled>
+                  <option>${commodityTitle}</option>
+                </select>
+                <input type="hidden" name="commodity" value="${commodity}">
+              </div>
+              <div data-form-group="hedgeFields">
+                <label class="form-label" for="hedgePercentDetail">Hedge %</label>
+                <div class="form-group--slider">
+                  <input type="range" id="hedgePercentDetail" name="percent" min="0" max="100" value="25">
+                  <input type="number" name="percent-display" min="0" max="100" value="25" class="input--small">
+                </div>
+                <label class="form-label" for="boardMonthDetail">Board Month</label>
+                <select id="boardMonthDetail" name="month"></select>
+              </div>
+              <div data-form-group="rollFields" hidden>
+                 <p>Roll functionality is not implemented in this view.</p>
+              </div>
+              <button type="submit" class="button--primary" disabled>Apply</button>
+              <div class="impact-preview" data-role="impact-preview">
+                 <p><strong>Impact Preview</strong></p>
+                 <span>Δ Hedge %: --</span>
+                 <span>Δ Futures P&L: --</span>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="hedge-detail-analytics-grid">
+          <div class="card">
+            <header class="card__header"><h3>Forward Curve</h3></header>
+            <div class="card__body"><canvas id="chart-forward-curve" height="200"></canvas></div>
+          </div>
+          <div class="card">
+            <header class="card__header"><h3>Exposure Ladder</h3></header>
+            <div class="card__body"><canvas id="chart-exposure-ladder" height="200"></canvas></div>
+          </div>
+          <div class="card">
+            <header class="card__header"><h3>Basis History</h3></header>
+            <div class="card__body"><canvas id="chart-basis-history" height="200"></canvas></div>
+          </div>
+          <div class="card">
+            <header class="card__header"><h3>Price Stack</h3></header>
+            <div class="card__body" data-role="price-stack-viz"><p>Price stack visualization...</p></div>
+          </div>
+          <div class="card">
+            <header class="card__header"><h3>Volatility & Correlation</h3></header>
+            <div class="card__body" data-role="vol-corr-viz"><p>Vol & Corr gauges...</p></div>
+          </div>
+          <div class="card">
+            <header class="card__header"><h3>What-If Simulator</h3></header>
+            <div class="card__body" data-role="what-if-sim">
+              <div class="form-group--slider">
+                <label for="boardShock">Board Shock (%)</label>
+                <input type="range" id="boardShock" name="boardShock" min="-3" max="3" value="0" step="0.1">
+                <span class="value-label">0.0%</span>
+              </div>
+              <div class="form-group--slider">
+                <label for="basisShock">Basis Shock (¢)</label>
+                <input type="range" id="basisShock" name="basisShock" min="-30" max="30" value="0" step="1">
+                <span class="value-label">0¢</span>
+              </div>
+              <div class="what-if-results" data-role="what-if-results">
+                 <p><strong>Projected Impact</strong></p>
+                 <span>Δ Futures P&L: $0</span>
+                 <span>Δ Basis P&L: $0</span>
+                 <span>Δ Net P&L: $0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card full-width">
+         <header class="card__header"><h3>Actions Log: ${commodityTitle}</h3></header>
+         <div class="card__body">
+           <table class="data-table" data-table="actions-log">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Action</th>
+                  <th>Month</th>
+                  <th>%/Qty</th>
+                  <th>Δ P&L</th>
+                </tr>
+              </thead>
+              <tbody><tr><td colspan="5">No actions logged yet.</td></tr></tbody>
+           </table>
+         </div>
+      </div>
     `;
+
+    // --- Data Population ---
+    const headerData = data.getHedgeDetailHeader(commodity);
+    const kpiContainer = detailView.querySelector('[data-role="detail-kpis"]');
+    Object.entries(headerData).forEach(([key, value]) => {
+      const el = kpiContainer.querySelector(`[data-kpi="${key}"]`);
+      if (el) {
+        if (key.includes('Percent')) el.textContent = utils.formatPercent(value);
+        else if (key.includes('PL') || key.includes('mtm')) el.textContent = utils.formatCurrency(value);
+        else el.textContent = value.toLocaleString();
+      }
+    });
+
+    const forwardCurveData = data.getForwardCurve(commodity);
+    charts.mountForwardCurveChart(detailView.querySelector('#chart-forward-curve'), forwardCurveData);
+
+    const exposureLadderData = data.getExposureLadder(commodity);
+    charts.mountExposureLadderChart(detailView.querySelector('#chart-exposure-ladder'), exposureLadderData);
+
+    const basisHistoryData = data.getBasisHistory(commodity);
+    charts.mountBasisHistoryChart(detailView.querySelector('#chart-basis-history'), basisHistoryData);
+
+    const priceStackData = data.getPriceStack(commodity);
+    const priceStackContainer = detailView.querySelector('[data-role="price-stack-viz"]');
+    priceStackContainer.innerHTML = priceStackData.map(d => `
+        <p>${d.month}: <strong>${d.local.toFixed(2)}</strong> (${d.board.toFixed(2)} + ${d.point.toFixed(2)} + ${d.zone.toFixed(2)})</p>
+    `).join('');
+
+    const volCorrData = data.getVolAndCorr(commodity);
+    const volCorrContainer = detailView.querySelector('[data-role="vol-corr-viz"]');
+    volCorrContainer.innerHTML = `<p>30d Vol: <strong>${volCorrData.volatility}</strong> | 90d Corr(B,B): <strong>${volCorrData.correlation}</strong></p>`;
+
+    const actionsLogData = data.getActionsLog(commodity);
+    const actionsLogTbody = detailView.querySelector('[data-table="actions-log"] tbody');
+    actionsLogTbody.innerHTML = actionsLogData.map(a => `
+        <tr>
+            <td>${a.timestamp}</td>
+            <td>${a.action}</td>
+            <td>${a.month}</td>
+            <td>${a.qty}</td>
+            <td>${utils.formatCurrency(a.pnl)}</td>
+        </tr>
+    `).join('');
+
+
+    // --- Simulator ---
+    const simulator = detailView.querySelector('[data-role="what-if-sim"]');
+    const boardSlider = simulator.querySelector('[name="boardShock"]');
+    const basisSlider = simulator.querySelector('[name="basisShock"]');
+
+    function updateSimulator() {
+        const boardShock = parseFloat(boardSlider.value);
+        const basisShock = parseInt(basisSlider.value);
+        simulator.querySelector('.value-label:nth-of-type(1)').textContent = `${boardShock.toFixed(1)}%`;
+        simulator.querySelector('.value-label:nth-of-type(2)').textContent = `${basisShock}¢`;
+
+        const unhedged = data.getHedgeDetailHeader(commodity).unhedgedQty;
+        const futuresDelta = unhedged * (boardShock/100) * 5.10 * -1; // Simplified
+        const basisDelta = unhedged * (basisShock/100);
+        const netDelta = futuresDelta + basisDelta;
+
+        const results = simulator.querySelector('[data-role="what-if-results"]');
+        results.querySelector('span:nth-of-type(1)').textContent = `Δ Futures P&L: ${utils.formatCurrency(futuresDelta)}`;
+        results.querySelector('span:nth-of-type(2)').textContent = `Δ Basis P&L: ${utils.formatCurrency(basisDelta)}`;
+        results.querySelector('span:nth-of-type(3)').textContent = `Δ Net P&L: ${utils.formatCurrency(netDelta)}`;
+    }
+
+    simulator.addEventListener('input', updateSimulator);
+    updateSimulator();
+
+    // --- Action Ticket ---
+    const formEl = detailView.querySelector('#hedgeFormDetail');
+    updateHedgeFormUI(formEl); // Re-use for month population
+    validateAndPreviewHedgeForm(formEl);
+
+    formEl.addEventListener('input', () => validateAndPreviewHedgeForm(formEl));
+    formEl.addEventListener('change', () => validateAndPreviewHedgeForm(formEl));
+    formEl.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const formData = new FormData(formEl);
+        const commodity = formData.get('commodity');
+        const percent = Number(formData.get('percent'));
+        const month = formData.get('month');
+        data.hedgeExposure({ commodity, percent, month });
+        utils.showToast(`Hedged ${percent}% ${commodity} in ${month}`);
+        document.dispatchEvent(new CustomEvent('ctrm:dataChanged', { detail: { commodity }}));
+    });
+
+    // --- Chart Interaction ---
+    const ladderChart = charts.mountExposureLadderChart(detailView.querySelector('#chart-exposure-ladder'), exposureLadderData);
+    if (ladderChart) {
+      ladderChart.options.onClick = (e) => {
+          const points = ladderChart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
+          if (points.length) {
+              const month = ladderChart.data.labels[points[0].index];
+              const monthSelect = formEl.querySelector('[name="month"]');
+              monthSelect.value = month;
+              utils.showToast(`Selected ${month} in Action Ticket.`);
+          }
+      };
+      ladderChart.update();
+    }
   }
 
   function renderRisk() {
