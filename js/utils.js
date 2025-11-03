@@ -15,6 +15,15 @@
     maximumFractionDigits: 1,
   });
 
+  function formatCurrencyThousands(value) {
+    if (typeof value !== 'number' || Number.isNaN(value)) return '--';
+    const sign = value < 0 ? '-' : '';
+    const absolute = Math.abs(value);
+    const scaled = absolute / 1000;
+    const display = scaled === 0 ? '0.0' : scaled.toFixed(1);
+    return `${sign}$${display}k`;
+  }
+
   function formatMillions(value) {
     if (typeof value !== 'number') return '--';
     return `${numberFormatter.format(value)} MM`;
@@ -122,6 +131,7 @@
   window.CTRMUtils = {
     formatMillions,
     formatCurrency,
+    formatCurrencyThousands,
     formatPercent,
     groupBy,
     sumBy,

@@ -334,6 +334,49 @@ body {
   min-height: 280px;
 }
 
+.whatif-result {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.whatif-result__header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.whatif-result__chart {
+  height: 160px;
+  min-height: 140px;
+}
+
+.whatif-result__chart canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.whatif-result__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.whatif-result__table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 4px 0;
+}
+
+.whatif-result__table td {
+  text-align: right;
+  font-weight: 600;
+  padding: 4px 0;
+}
+
 .hedge-detail__log {
   grid-area: log;
 }

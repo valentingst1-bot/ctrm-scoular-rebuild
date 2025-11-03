@@ -171,22 +171,53 @@
     });
   }
 
-  function mountWhatIf(el, data) {
-      mountChart(el.id, {
-          type: 'bar',
-          data: {
-              labels: ['Futures Δ', 'Basis Δ', 'Net Δ'],
-              datasets: [{
-                  data: [data.futuresDelta, data.basisDelta, data.netDelta],
-                  backgroundColor: ['#004bff', '#1ab76c', '#ff8c42']
-              }]
+  function mountWhatIf(elOrId, deltas = {}) {
+    const el = resolveElement(elOrId);
+    if (!el || !el.id) return null;
+    const values = [deltas.futuresDelta || 0, deltas.basisDelta || 0, deltas.netDelta || 0];
+    const labels = ['Futures Δ', 'Basis Δ', 'Net Δ'];
+    return mountChart(el.id, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            data: values,
+            backgroundColor: ['#004bff', '#1ab76c', '#ff8c42'],
+            borderRadius: 4,
           },
-          options: {
-              indexAxis: 'y',
-              plugins: { legend: { display: false } },
-              scales: { x: { ticks: { callback: v => utils.formatCurrency(v, 0) } } }
-          }
-      });
+        ],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const label = labels[context.dataIndex] || '';
+                const value = context.parsed.x ?? context.parsed;
+                return `${label}: ${utils.formatCurrencyThousands(value)}`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            beginAtZero: true,
+            ticks: {
+              callback: (value) => utils.formatCurrencyThousands(value),
+            },
+          },
+          y: {
+            grid: { display: false },
+          },
+        },
+      },
+    });
   }
 
   window.CTRMCharts = {
