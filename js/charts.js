@@ -94,14 +94,16 @@
 
   function mountExposureLadderChart(el, data) {
     const labels = data.map(d => d.month);
+    const datasets = [
+        { label: 'Hedged', data: data.map(d => d.hedged), backgroundColor: '#1ab76c' },
+        { label: 'Unhedged', data: data.map(d => Math.max(0, d.physical - d.hedged)), backgroundColor: '#e03e3e' }
+    ];
+
     mountChart(el.id, {
       type: 'bar',
       data: {
         labels,
-        datasets: [
-          { label: 'Hedged', data: data.map(d => d.hedged), backgroundColor: '#1ab76c' },
-          { label: 'Unhedged', data: data.map(d => d.unhedged), backgroundColor: '#e03e3e' }
-        ]
+        datasets
       },
       options: {
         scales: { x: { stacked: true }, y: { stacked: true } },

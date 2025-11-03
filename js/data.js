@@ -552,11 +552,24 @@
 
   function hedgeExposure({ commodity, percent, month }) {
     const deltaCoverage = Number(percent) / 4;
+    const pnlDelta = Math.random() * -20000;
     updateKpiAdjustment('hedgeCoverage', deltaCoverage);
     updateKpiAdjustment('mtmChange', percent * 0.02);
+    updateKpiAdjustment('futuresPL', pnlDelta / 1000000);
+
     const entry = exposures.byCommodity[commodity] || (exposures.byCommodity[commodity] = { physical: 0, hedged: 0 });
     const additional = Math.round(entry.physical * (Number(percent) / 100));
     entry.hedged += additional;
+
+    actionsLog.push({
+        ts: new Date().toISOString(),
+        type: 'hedge',
+        commodity,
+        month,
+        value: `${percent}%`,
+        pnlDelta
+    });
+
     recordHedgePoint(month || 'Hedge');
     exposures.pnlSensitivity = exposures.pnlSensitivity.map((value, idx) => value + (idx - 3) * 0.1);
     notify('hedgeUpdated', { commodity, percent });
@@ -566,10 +579,22 @@
   function rollMonth({ symbol, from, to }) {
     const position = futuresPositions.find((pos) => pos.symbol === symbol && pos.month === from);
     if (!position) return;
+
+    const pnlDelta = (Math.random() * 20000) + 5000;
     position.month = to;
     position.avgPrice += 0.08;
-    updateKpiAdjustment('futuresPL', 0.4);
+    updateKpiAdjustment('futuresPL', pnlDelta / 1000000);
     updateKpiAdjustment('mtmChange', 0.2);
+
+    actionsLog.push({
+        ts: new Date().toISOString(),
+        type: 'roll',
+        commodity: 'N/A', // Symbol would need mapping
+        month: `${from} -> ${to}`,
+        value: position.qty,
+        pnlDelta
+    });
+
     recordHedgePoint(to);
     notify('futuresRolled', { symbol, from, to });
     notify('snapshotUpdated', { snapshot: getSnapshot() });
@@ -641,7 +666,7 @@
     }));
   }
 
-  function getExposureLadder(commodity) {
+  function getExposureByMonth(commodity) {
       const summary = getExposureSummary().byCommodity[commodity];
       if (!summary) return [];
       const months = ['Sep-24', 'Oct-24', 'Nov-24', 'Dec-24', 'Jan-25'];
@@ -649,31 +674,29 @@
       const totalHedged = summary.hedged;
 
       return months.map((month, i) => {
-          const phys = totalPhys / months.length * (1 - i*0.1 + Math.random()*0.1);
+          const physical = totalPhys / months.length * (1 - i*0.1 + Math.random()*0.1);
           const hedged = totalHedged / months.length * (1 - i*0.05 + Math.random()*0.05);
           return {
               month,
-              physical: Math.round(phys),
+              physical: Math.round(physical),
               hedged: Math.round(hedged),
-              unhedged: Math.max(0, Math.round(phys - hedged)),
           };
       });
   }
 
   function getBasisHistory(commodity) {
       const zones = ['Prairie North', 'Gulf Export', 'Mississippi River'];
-      const labels = ['Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'];
-      const datasets = zones.map((zone, i) => {
+      const history = {};
+      const months = ['2024-03-01', '2024-04-01', '2024-05-01', '2024-06-01', '2024-07-01', '2024-08-01', '2024-09-01'];
+      zones.forEach((zone, i) => {
+          history[zone] = [];
           let basis = 0.20 - i*0.05;
-          return {
-              label: zone,
-              data: labels.map(() => {
-                  basis += (Math.random() - 0.5) * 0.05;
-                  return basis;
-              })
-          };
+          months.forEach(month => {
+              basis += (Math.random() - 0.5) * 0.05;
+              history[zone].push({ date: month, basis: basis });
+          });
       });
-      return { labels, datasets };
+      return history;
   }
 
   function getPriceStack(commodity) {
@@ -703,20 +726,28 @@
       };
   }
 
+  const actionsLog = [];
+
   function getActionsLog(commodity) {
-      const actions = [];
-      const types = ['Hedge', 'Roll', 'Lift Hedge'];
-      const months = ['Nov-24', 'Jan-25', 'Mar-25'];
-      for (let i=0; i < 7; i++) {
-          actions.push({
-              timestamp: `2024-09-${28-i*2} 10:3${i} AM`,
-              action: types[i % types.length],
-              month: months[i % months.length],
-              qty: `${Math.round(Math.random()*20+5)}%`,
-              pnl: (Math.random() * 10000 - 4000)
-          });
-      }
-      return actions;
+      return actionsLog.filter(a => a.commodity === commodity).slice(-10);
+  }
+
+  function simulateShock({ commodity, boardPct, basisCents }) {
+    const summary = getExposureSummary().byCommodity[commodity];
+    if (!summary) return { futuresDelta: 0, basisDelta: 0, netDelta: 0 };
+
+    const unhedged = Math.max(0, summary.physical - summary.hedged);
+    const hedged = summary.hedged;
+
+    const boardPrice = getForwardCurve(commodity)[0].price;
+    const futuresDelta = hedged * (boardPrice * (boardPct / 100));
+    const basisDelta = summary.physical * (basisCents / 100);
+
+    return {
+      futuresDelta,
+      basisDelta,
+      netDelta: futuresDelta + basisDelta
+    };
   }
   window.CTRMData = {
     subscribe,
@@ -731,11 +762,12 @@
     getExposureByCommodity,
     getHedgeDetailHeader,
     getForwardCurve,
-    getExposureLadder,
+    getExposureByMonth,
     getBasisHistory,
     getPriceStack,
     getVolAndCorr,
     getActionsLog,
+    simulateShock,
     getVarianceActivity,
     getCarrySpark,
     getCarryHeadline,
