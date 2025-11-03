@@ -444,6 +444,20 @@
     return buildSnapshot(key || currentSnapshotKey);
   }
 
+  function getHeaderSnapshot() {
+    const snapshot = getSnapshot();
+    return {
+      key: snapshot.key,
+      mtm: snapshot.mtmChange,
+      hedge: snapshot.hedgeCoverage,
+      basis: snapshot.basisPL,
+      futures: snapshot.futuresPL,
+      freight: snapshot.freightVar,
+      other: snapshot.otherPL,
+      wc: snapshot.workingCapital,
+    };
+  }
+
   function setSnapshot(key) {
     if (!baseSnapshots[key]) return;
     currentSnapshotKey = key;
@@ -777,6 +791,7 @@
     subscribe,
     setSnapshot,
     getSnapshot,
+    getHeaderSnapshot,
     getTrades,
     getTradeById,
     getInventory,
