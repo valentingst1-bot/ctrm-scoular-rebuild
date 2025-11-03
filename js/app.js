@@ -547,11 +547,14 @@
   }
 
   function renderHedge(ctx) {
+    const isDetailView = ctx && ctx.params && ctx.params.commodity;
     const overviewView = document.querySelector('[data-view-mode="overview"]');
     const detailView = document.querySelector('[data-view-mode="detail"]');
-    const showDetail = !!ctx.params.commodity;
 
-    if (showDetail) {
+    overviewView.hidden = isDetailView;
+    detailView.hidden = !isDetailView;
+
+    if (isDetailView) {
       renderHedgeDetail(ctx.params.commodity);
     } else {
       renderHedgeOverview();
@@ -603,6 +606,7 @@
   function renderHedgeDetail(commodity) {
     const detailView = document.querySelector('[data-view-mode="detail"]');
     const commodityTitle = commodity.charAt(0).toUpperCase() + commodity.slice(1);
+
     detailView.innerHTML = `
       <div class="detail-header">
         <a href="#/hedge" class="back-link">&larr; Back to Overview</a>

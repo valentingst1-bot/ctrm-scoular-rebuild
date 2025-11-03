@@ -1,23 +1,21 @@
 (function () {
   const listeners = new Set();
+  const routes = [
+    { pattern: /#\/hedge\/(\w+)/, name: '#/hedge/:commodity' }
+  ];
 
   function resolve(hash) {
-    let path = hash;
-    if (!path || path === '#') {
-      path = '#/trader';
-    } else if (!path.startsWith('#')) {
-      path = '#' + path;
+    for (const route of routes) {
+      const match = hash.match(route.pattern);
+      if (match) {
+        return {
+          name: route.name,
+          params: { commodity: match[1] },
+          hash: hash
+        };
+      }
     }
-
-    const context = { name: path, params: {}, hash: path };
-
-    const hedgeDetailMatch = path.match(/^#\/hedge\/([\w\-]+)$/);
-    if (hedgeDetailMatch) {
-      context.name = '#/hedge/:commodity';
-      context.params.commodity = hedgeDetailMatch[1];
-    }
-
-    return context;
+    return { name: hash, params: {}, hash: hash };
   }
 
   function notify(hash) {
@@ -27,7 +25,7 @@
 
   function subscribe(handler) {
     listeners.add(handler);
-    handler(resolve(window.location.hash));
+    handler(resolve(window.location.hash || '#/trader'));
     return () => listeners.delete(handler);
   }
 
