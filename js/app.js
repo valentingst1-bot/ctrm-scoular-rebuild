@@ -30,18 +30,6 @@
     return map;
   }, {});
   const navLinks = document.querySelectorAll('.nav-link');
-  const traderCommoditySelect = document.querySelector('[data-role="trader-filter-commodity"]');
-  const traderModeButtons = document.querySelectorAll('[data-role="trader-mode"] button');
-  const traderWindowButtons = document.querySelectorAll('[data-role="trader-window"] button');
-
-  const traderState = {
-    commodity: 'All',
-    mode: 'live',
-    window: '60',
-    carryCommodity: '',
-  };
-
-  let coverageGaugeIds = [];
 
   let activeRoute = null;
   let lastRouteContext = null;
@@ -120,12 +108,6 @@
         charts.destroyChart('chart-mtm-trend');
         charts.destroyChart('chart-exposure-commodity');
         charts.destroyChart('chart-hedge-physical');
-        charts.destroyChart('chart-trader-waterfall');
-        charts.destroyChart('chart-carry-curve');
-        charts.destroyChart('chart-variance-timeline');
-        charts.destroyChart('chart-basis-map');
-        coverageGaugeIds.forEach((id) => charts.destroyChart(id));
-        coverageGaugeIds = [];
       }
     },
     '#/physical': { render: renderPhysical },
@@ -173,32 +155,6 @@
     });
   });
 
-  if (traderCommoditySelect) {
-    traderCommoditySelect.addEventListener('change', (event) => {
-      traderState.commodity = event.target.value || 'All';
-      if (traderState.commodity !== 'All') {
-        traderState.carryCommodity = traderState.commodity;
-      }
-      renderTrader();
-    });
-  }
-
-  traderModeButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const mode = btn.dataset.mode || 'live';
-      traderState.mode = mode;
-      const snapshotKey = mode === 'monthEnd' ? 'monthEndAug' : 'today';
-      data.setSnapshot(snapshotKey);
-    });
-  });
-
-  traderWindowButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      traderState.window = btn.dataset.window || '60';
-      renderTrader();
-    });
-  });
-
   navLinks.forEach((link) => {
     link.addEventListener('click', (event) => {
       event.preventDefault();
@@ -223,9 +179,6 @@
   document.addEventListener('ctrm:dataChanged', () => {
     renderHeader(data.getHeaderSnapshot?.());
     renderHedge(lastRouteContext);
-    if (activeRoute === '#/trader') {
-      renderTrader();
-    }
   });
   document.addEventListener('click', (event) => {
     const matchBtn = event.target.closest('[data-action="match-ticket"]');
@@ -236,34 +189,6 @@
     if (resetBtn) {
       data.resetDemo();
       renderActiveView();
-    }
-    const focusBtn = event.target.closest('[data-action="focus-commodity"]');
-    if (focusBtn) {
-      const commodity = focusBtn.dataset.commodity;
-      if (commodity) {
-        traderState.commodity = commodity;
-        traderState.carryCommodity = commodity;
-        if (traderCommoditySelect) {
-          traderCommoditySelect.value = commodity;
-        }
-        renderTrader();
-      }
-    }
-    const alertLink = event.target.closest('[data-action="trader-alert"]');
-    if (alertLink) {
-      const commodity = alertLink.dataset.commodity;
-      if (commodity) {
-        traderState.commodity = commodity;
-        traderState.carryCommodity = commodity;
-        if (traderCommoditySelect) {
-          traderCommoditySelect.value = commodity;
-        }
-      }
-      const targetRoute = alertLink.dataset.route;
-      if (targetRoute) {
-        router.navigate(targetRoute);
-      }
-      renderTrader();
     }
   });
 
@@ -396,85 +321,18 @@
   }
 
   function renderTrader() {
-    const bulletinsEl = document.querySelector('[data-role="trader-bulletins"]');
-    if (!bulletinsEl) return;
-
-    const toRgba = (hex, alpha = 1) => {
-      if (!hex) return `rgba(13, 27, 42, ${alpha})`;
-      const normalized = hex.replace('#', '');
-      const bigint = parseInt(normalized, 16);
-      const r = (bigint >> 16) & 255;
-      const g = (bigint >> 8) & 255;
-      const b = bigint & 255;
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    };
-
+    const container = document.querySelector('[data-role="trader-bulletins"]');
+    container.innerHTML = '';
     const snapshot = data.getSnapshot();
-    const exposure = data.getExposureSummary();
-    const commodityList = typeof data.getDashboardCommodityList === 'function'
-      ? data.getDashboardCommodityList()
-      : Object.keys(exposure.byCommodity || {});
-
-    if (traderState.commodity !== 'All' && !commodityList.includes(traderState.commodity)) {
-      traderState.commodity = 'All';
-    }
-
-    if (!traderState.carryCommodity || !commodityList.includes(traderState.carryCommodity)) {
-      traderState.carryCommodity = traderState.commodity !== 'All'
-        ? traderState.commodity
-        : (commodityList[0] || '');
-    }
-
-    if (traderState.commodity !== 'All') {
-      traderState.carryCommodity = traderState.commodity;
-    }
-
-    if (traderCommoditySelect) {
-      traderCommoditySelect.innerHTML = '';
-      ['All', ...commodityList].forEach((commodity) => {
-        const option = utils.createElement('option', { text: commodity, attrs: { value: commodity } });
-        traderCommoditySelect.appendChild(option);
-      });
-      traderCommoditySelect.value = traderState.commodity;
-    }
-
-    const snapshotKey = snapshot.key || 'today';
-    traderState.mode = snapshotKey === 'monthEndAug' ? 'monthEnd' : 'live';
-    traderModeButtons.forEach((btn) => {
-      const mode = btn.dataset.mode || 'live';
-      btn.classList.toggle('is-active', mode === traderState.mode);
-    });
-
-    traderWindowButtons.forEach((btn) => {
-      const win = btn.dataset.window || '60';
-      btn.classList.toggle('is-active', win === String(traderState.window));
-    });
-
-    bulletinsEl.innerHTML = '';
-    (snapshot.bulletins || []).forEach((bullet) => {
+    snapshot.bulletins.forEach((bullet) => {
       const li = utils.createElement('li', { text: bullet });
-      bulletinsEl.appendChild(li);
+      container.appendChild(li);
     });
 
-    const tickerContainer = document.querySelector('[data-role="live-tickers"]');
-    if (tickerContainer) {
-      tickerContainer.innerHTML = '';
-      const tickers = typeof data.getLiveTickers === 'function' ? data.getLiveTickers() : [];
-      tickers.forEach((ticker) => {
-        const changeClass = ticker.changePct >= 0 ? 'is-up' : 'is-down';
-        const tickerEl = utils.createElement('div', { className: `live-ticker ${changeClass}` });
-        tickerEl.innerHTML = `
-          <span class="live-ticker__commodity">${ticker.commodity}</span>
-          <span class="live-ticker__month">${ticker.month}</span>
-          <span class="live-ticker__last">${ticker.last.toFixed(2)}</span>
-          <span class="live-ticker__change">${ticker.changePct >= 0 ? '+' : ''}${ticker.changePct.toFixed(2)}%</span>
-        `;
-        tickerContainer.appendChild(tickerEl);
-      });
-    }
-
+    const exposure = data.getExposureSummary();
     const months = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const mtmSeries = months.map((_, index) => snapshot.mtmChange + index * 0.4 - 1);
+    const mtmSeries = months.map((month, index) => snapshot.mtmChange + index * 0.4 - 1);
+
     charts.mountChart('chart-mtm-trend', {
       type: 'line',
       data: {
@@ -500,16 +358,8 @@
       }
     });
 
-    let commodityLabels = Object.keys(exposure.byCommodity || {});
-    if (traderState.commodity !== 'All') {
-      commodityLabels = commodityLabels.filter((label) => label === traderState.commodity);
-    }
-    const commodityValues = commodityLabels.map((label) => (exposure.byCommodity[label]?.physical || 0) / 1000);
-    const exposureColors = commodityLabels.map((label) => {
-      const base = utils.getCommodityColor(label);
-      if (traderState.commodity === 'All') return base;
-      return label === traderState.commodity ? base : toRgba(base, 0.35);
-    });
+    const commodityLabels = Object.keys(exposure.byCommodity);
+    const commodityValues = commodityLabels.map((label) => exposure.byCommodity[label].physical / 1000);
 
     charts.mountChart('chart-exposure-commodity', {
       type: 'bar',
@@ -518,7 +368,7 @@
         datasets: [{
           label: 'Physical (000s)',
           data: commodityValues,
-          backgroundColor: exposureColors.length ? exposureColors : ['#004bff']
+          backgroundColor: ['#004bff', '#1ab76c', '#8a5aff', '#ff8c42']
         }]
       },
       options: {
@@ -530,20 +380,17 @@
       }
     });
 
-    const hedgedValues = commodityLabels.map((label) => exposure.byCommodity[label]?.hedged || 0);
-    const physicalTotals = commodityLabels.map((label) => exposure.byCommodity[label]?.physical || 0);
-    const hedgeTotal = hedgedValues.reduce((a, b) => a + b, 0);
-    const physicalTotal = physicalTotals.reduce((a, b) => a + b, 0);
-    const doughnutData = traderState.commodity === 'All'
-      ? [hedgeTotal, physicalTotal]
-      : [hedgedValues[0] || 0, physicalTotals[0] || 0];
+    const hedgeValues = commodityLabels.map((label) => exposure.byCommodity[label].hedged);
+    const physicalValues = commodityLabels.map((label) => exposure.byCommodity[label].physical);
+    const hedgeTotal = hedgeValues.reduce((a, b) => a + b, 0);
+    const physicalTotal = physicalValues.reduce((a, b) => a + b, 0);
 
     charts.mountChart('chart-hedge-physical', {
       type: 'doughnut',
       data: {
         labels: ['Hedged', 'Physical'],
         datasets: [{
-          data: doughnutData,
+          data: [hedgeTotal, physicalTotal],
           backgroundColor: ['#1ab76c', '#004bff'],
           borderWidth: 0
         }]
@@ -555,295 +402,6 @@
         }
       }
     });
-
-    const net = snapshot.basisPL + snapshot.futuresPL + snapshot.freightVar + snapshot.otherPL;
-    charts.mountChart('chart-trader-waterfall', {
-      type: 'bar',
-      data: {
-        labels: ['Basis', 'Futures', 'Freight', 'Other', 'Net'],
-        datasets: [{
-          data: [snapshot.basisPL, snapshot.futuresPL, snapshot.freightVar, snapshot.otherPL, net],
-          backgroundColor: ['#1ab76c', '#004bff', '#e03e3e', '#8a5aff', '#1ab76c']
-        }]
-      },
-      options: {
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { display: false } },
-          y: { ticks: { callback: (value) => `${value.toFixed(1)} MM` } }
-        }
-      }
-    });
-
-    const heatmapContainer = document.querySelector('[data-role="exposure-heatmap"]');
-    if (heatmapContainer) {
-      heatmapContainer.innerHTML = '';
-      const heatmapData = typeof data.getDashboardHeatmap === 'function' ? data.getDashboardHeatmap() : null;
-      if (heatmapData) {
-        const relevantRows = traderState.commodity === 'All'
-          ? heatmapData.rows
-          : heatmapData.rows.filter((row) => row.commodity === traderState.commodity);
-        const maxValue = Math.max(1, ...heatmapData.rows.flatMap((row) => row.values.map((cell) => cell.physical)));
-        const table = utils.createElement('table', { className: 'heatmap-table' });
-        const thead = utils.createElement('thead');
-        const headerRow = utils.createElement('tr');
-        headerRow.appendChild(utils.createElement('th', { text: 'Commodity' }));
-        heatmapData.months.forEach((month) => {
-          headerRow.appendChild(utils.createElement('th', { text: month }));
-        });
-        thead.appendChild(headerRow);
-        table.appendChild(thead);
-        const tbody = utils.createElement('tbody');
-        (relevantRows.length ? relevantRows : heatmapData.rows).forEach((row) => {
-          const tr = utils.createElement('tr', { attrs: { 'data-commodity': row.commodity } });
-          if (traderState.commodity !== 'All' && row.commodity === traderState.commodity) {
-            tr.classList.add('is-active');
-          }
-          tr.appendChild(utils.createElement('th', { text: row.commodity }));
-          row.values.forEach((cell) => {
-            const intensity = Math.max(0, Math.min(1, cell.physical / maxValue));
-            const td = utils.createElement('td', { className: 'heatmap-cell' });
-            td.style.setProperty('--heat-intensity', intensity.toString());
-            td.innerHTML = `
-              <span class="heatmap-cell__value">${cell.physical.toLocaleString()}</span>
-              <span class="heatmap-cell__hedge">H ${cell.hedged.toLocaleString()} · U ${cell.unhedged.toLocaleString()}</span>
-            `;
-            td.setAttribute('title', `${row.commodity} ${cell.month}: Physical ${cell.physical.toLocaleString()} · Hedged ${cell.hedged.toLocaleString()} · Unhedged ${cell.unhedged.toLocaleString()}`);
-            if (traderState.commodity !== 'All' && row.commodity !== traderState.commodity) {
-              td.classList.add('is-muted');
-            }
-            tr.appendChild(td);
-          });
-          tbody.appendChild(tr);
-        });
-        table.appendChild(tbody);
-        heatmapContainer.appendChild(table);
-      } else {
-        heatmapContainer.textContent = 'Heatmap unavailable.';
-      }
-    }
-
-    const carryCommodity = traderState.carryCommodity || commodityList[0] || '';
-    const carryData = typeof data.getDashboardCarryCurve === 'function' ? data.getDashboardCarryCurve(carryCommodity) : [];
-    const carryLabels = carryData.map((point) => point.label);
-    const carryValues = carryData.map((point) => point.value);
-    const carrySelect = document.querySelector('[data-role="carry-commodity"]');
-    if (carrySelect) {
-      carrySelect.innerHTML = '';
-      commodityList.forEach((commodity) => {
-        const option = utils.createElement('option', { text: commodity, attrs: { value: commodity } });
-        carrySelect.appendChild(option);
-      });
-      if (carryCommodity) {
-        carrySelect.value = carryCommodity;
-      }
-      carrySelect.onchange = (event) => {
-        traderState.carryCommodity = event.target.value;
-        if (event.target.value) {
-          traderState.commodity = event.target.value;
-          if (traderCommoditySelect) {
-            traderCommoditySelect.value = event.target.value;
-          }
-        }
-        renderTrader();
-      };
-    }
-
-    charts.mountChart('chart-carry-curve', {
-      type: 'line',
-      data: {
-        labels: carryLabels,
-        datasets: [{
-          label: 'Carry (¢/bu)',
-          data: carryValues,
-          borderColor: utils.getCommodityColor(carryCommodity || 'Other'),
-          tension: 0.3,
-          fill: false,
-          pointRadius: 3,
-        }]
-      },
-      options: {
-        plugins: { legend: { display: false } },
-        scales: {
-          y: { ticks: { callback: (value) => `${Number(value).toFixed(1)}¢` } }
-        }
-      }
-    });
-
-    const coverageContainer = document.querySelector('[data-role="coverage-gauges"]');
-    if (coverageContainer) {
-      coverageContainer.innerHTML = '';
-      coverageGaugeIds.forEach((id) => charts.destroyChart(id));
-      coverageGaugeIds = [];
-      const coverageData = typeof data.getHedgeCoverageSnapshot === 'function' ? data.getHedgeCoverageSnapshot() : [];
-      const highlightCommodity = traderState.commodity !== 'All' ? traderState.commodity : '';
-      coverageData.forEach((entry) => {
-        const gaugeId = `coverage-${utils.slug(entry.commodity)}`;
-        coverageGaugeIds.push(gaugeId);
-        const card = utils.createElement('div', { className: `coverage-card${highlightCommodity && entry.commodity !== highlightCommodity ? ' is-muted' : ''}` });
-        const canvas = utils.createElement('canvas', { attrs: { id: gaugeId, width: 120, height: 120 } });
-        card.appendChild(canvas);
-        card.appendChild(utils.createElement('p', { className: 'coverage-card__label', text: entry.commodity }));
-        card.appendChild(utils.createElement('p', { className: 'coverage-card__meta', text: `${Math.round(entry.hedged).toLocaleString()} / ${Math.round(entry.physical).toLocaleString()}` }));
-        coverageContainer.appendChild(card);
-
-        const pct = Math.max(0, Math.min(100, entry.coverage));
-        const gaugePlugin = {
-          id: `centerText-${gaugeId}`,
-          afterDraw(chartInstance) {
-            const { ctx, chartArea } = chartInstance;
-            if (!chartArea) return;
-            const centerX = (chartArea.left + chartArea.right) / 2;
-            const centerY = (chartArea.top + chartArea.bottom) / 2;
-            ctx.save();
-            ctx.fillStyle = '#0d1b2a';
-            ctx.font = '600 14px "Inter", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(`${pct.toFixed(0)}%`, centerX, centerY);
-            ctx.restore();
-          },
-        };
-
-        charts.mountChart(gaugeId, {
-          type: 'doughnut',
-          data: {
-            labels: ['Hedged', 'Unhedged'],
-            datasets: [{
-              data: [pct, Math.max(0, 100 - pct)],
-              backgroundColor: [utils.getCommodityColor(entry.commodity), '#e8edf7'],
-              borderWidth: 0,
-            }],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '72%',
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                callbacks: {
-                  label: (context) => {
-                    const label = context.label || '';
-                    if (label === 'Hedged') {
-                      return `Hedged ${pct.toFixed(1)}%`;
-                    }
-                    return `Unhedged ${(Math.max(0, 100 - pct)).toFixed(1)}%`;
-                  },
-                },
-              },
-            },
-          },
-          plugins: [gaugePlugin],
-        });
-      });
-    }
-
-    const varianceData = typeof data.getVarianceTimeline === 'function' ? data.getVarianceTimeline(traderState.window) : [];
-    const varianceLabels = varianceData.map((point) => point.label);
-    const varianceValues = varianceData.map((point) => point.delta);
-    const varianceColors = varianceValues.map((value) => (value >= 0 ? '#1ab76c' : '#e03e3e'));
-
-    charts.mountChart('chart-variance-timeline', {
-      type: 'bar',
-      data: {
-        labels: varianceLabels,
-        datasets: [{
-          data: varianceValues,
-          backgroundColor: varianceColors,
-          borderRadius: 4,
-        }],
-      },
-      options: {
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
-          y: { ticks: { callback: (value) => `${Number(value).toFixed(1)} MM` } }
-        }
-      }
-    });
-
-    const basisCommodity = traderState.commodity !== 'All'
-      ? traderState.commodity
-      : (traderState.carryCommodity || commodityList[0] || 'Soybeans');
-    const basisData = typeof data.getDashboardBasisMap === 'function' ? data.getDashboardBasisMap(basisCommodity) : null;
-    if (basisData) {
-      const basisSubtitle = document.querySelector('[data-role="basis-map-subtitle"]');
-      if (basisSubtitle) {
-        basisSubtitle.textContent = `${basisData.commodity} · basis by zone`;
-      }
-      const palette = ['#004bff', '#1ab76c', '#ff8c42', '#8a5aff'];
-      charts.mountChart('chart-basis-map', {
-        type: 'line',
-        data: {
-          labels: basisData.labels,
-          datasets: basisData.datasets.map((dataset, index) => ({
-            label: dataset.zone,
-            data: dataset.data.map((value) => Number((value * 100).toFixed(2))),
-            borderColor: palette[index % palette.length],
-            fill: false,
-            tension: 0.3,
-          })),
-        },
-        options: {
-          plugins: { legend: { position: 'bottom' } },
-          scales: {
-            y: {
-              ticks: {
-                callback: (value) => `${Number(value).toFixed(1)}¢`,
-              },
-            },
-          },
-        },
-      });
-    }
-
-    const newsList = document.querySelector('[data-role="news-sentiment"]');
-    if (newsList) {
-      newsList.innerHTML = '';
-      const newsItems = typeof data.getNewsSentiment === 'function' ? data.getNewsSentiment() : [];
-      newsItems.forEach((item) => {
-        const li = utils.createElement('li', { className: 'news-item' });
-        if (traderState.commodity !== 'All' && item.commodity === traderState.commodity) {
-          li.classList.add('is-active');
-        }
-        const headline = utils.createElement('button', {
-          className: 'news-item__headline',
-          text: item.headline,
-          attrs: { type: 'button', 'data-action': 'focus-commodity', 'data-commodity': item.commodity }
-        });
-        const sentimentLabel = item.sentiment.charAt(0).toUpperCase() + item.sentiment.slice(1);
-        const meta = utils.createElement('div', {
-          className: 'news-item__meta',
-          html: `
-            <span class="sentiment-badge sentiment-badge--${item.sentiment}">${sentimentLabel}</span>
-            <span class="news-item__source">${item.source}</span>
-          `,
-        });
-        li.appendChild(headline);
-        li.appendChild(meta);
-        newsList.appendChild(li);
-      });
-    }
-
-    const alertsContainer = document.querySelector('[data-role="alerts-list"]');
-    if (alertsContainer) {
-      alertsContainer.innerHTML = '';
-      const alerts = typeof data.getDashboardAlerts === 'function' ? data.getDashboardAlerts() : [];
-      alerts.forEach((alert) => {
-        const badge = utils.createElement('button', {
-          className: `alert-pill alert-pill--${alert.severity || 'info'}`,
-          text: alert.label,
-          attrs: {
-            type: 'button',
-            'data-action': 'trader-alert',
-            'data-route': alert.route || '',
-            'data-commodity': alert.commodity || '',
-          }
-        });
-        alertsContainer.appendChild(badge);
-      });
-    }
   }
 
   function renderPhysical() {
