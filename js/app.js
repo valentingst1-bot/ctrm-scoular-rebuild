@@ -105,17 +105,9 @@
     '#/trader': {
       render: renderTrader,
       destroy: () => {
-        charts.destroyChart('chart-pnl-waterfall');
-        charts.destroyChart('chart-exposure-heatmap');
-        charts.destroyChart('chart-carry-curve');
-        charts.destroyChart('chart-variance-timeline');
-        charts.destroyChart('chart-basis-map');
-        const gaugeContainer = document.querySelector('[data-role="hedge-coverage-gauges"]');
-        if (gaugeContainer) {
-            gaugeContainer.querySelectorAll('canvas').forEach(canvas => {
-                charts.destroyChart(canvas.id);
-            });
-        }
+        charts.destroyChart('chart-mtm-trend');
+        charts.destroyChart('chart-exposure-commodity');
+        charts.destroyChart('chart-hedge-physical');
       }
     },
     '#/physical': { render: renderPhysical },
@@ -186,11 +178,7 @@
 
   document.addEventListener('ctrm:dataChanged', () => {
     renderHeader(data.getHeaderSnapshot?.());
-    if (activeRoute === '#/trader') {
-      renderTrader();
-    } else {
-      renderHedge(lastRouteContext);
-    }
+    renderHedge(lastRouteContext);
   });
   document.addEventListener('click', (event) => {
     const matchBtn = event.target.closest('[data-action="match-ticket"]');
@@ -206,13 +194,7 @@
 
   const tradeFilters = document.querySelectorAll('.filters [data-filter]');
   tradeFilters.forEach((filter) => {
-    filter.addEventListener('change', () => {
-        if (activeRoute === '#/physical') {
-            renderPhysical();
-        } else if (activeRoute === '#/trader') {
-            renderTrader();
-        }
-    });
+    filter.addEventListener('change', renderPhysical);
   });
 
   const hedgeActionsForm = document.getElementById('hedgeForm');
@@ -339,89 +321,86 @@
   }
 
   function renderTrader() {
-    const commodityFilter = document.querySelector('[data-route="#/trader"] [data-filter="commodity"]').value;
-    const snapshotFilter = document.querySelector('[data-route="#/trader"] [data-filter="snapshot"]').value;
+    const container = document.querySelector('[data-role="trader-bulletins"]');
+    container.innerHTML = '';
+    const snapshot = data.getSnapshot();
+    snapshot.bulletins.forEach((bullet) => {
+      const li = utils.createElement('li', { text: bullet });
+      container.appendChild(li);
+    });
 
-    const snapshot = data.getSnapshot(snapshotFilter === 'live' ? 'today' : 'monthEndAug');
     const exposure = data.getExposureSummary();
+    const months = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const mtmSeries = months.map((month, index) => snapshot.mtmChange + index * 0.4 - 1);
 
-    // P&L Waterfall
-    charts.mountPnLWaterfall('chart-pnl-waterfall', {
-      basisPL: snapshot.basisPL,
-      futuresPL: snapshot.futuresPL,
-      freightVar: snapshot.freightVar,
-      otherPL: snapshot.otherPL,
-      netPL: snapshot.basisPL + snapshot.futuresPL + snapshot.freightVar + snapshot.otherPL
+    charts.mountChart('chart-mtm-trend', {
+      type: 'line',
+      data: {
+        labels: months,
+        datasets: [{
+          label: 'MTM',
+          data: mtmSeries,
+          borderColor: '#004bff',
+          tension: 0.35,
+          fill: {
+            target: 'origin',
+            above: 'rgba(0, 75, 255, 0.18)'
+          },
+          pointRadius: 3,
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { display: false },
+          x: { grid: { display: false } }
+        }
+      }
     });
 
-    // Exposure Heatmap
-    const commodities = commodityFilter ? [commodityFilter] : ['Soybeans', 'Corn', 'Wheat', 'Canola'];
-    charts.mountExposureHeatmap('chart-exposure-heatmap', {
-      commodities: commodities,
-      months: ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Mar']
+    const commodityLabels = Object.keys(exposure.byCommodity);
+    const commodityValues = commodityLabels.map((label) => exposure.byCommodity[label].physical / 1000);
+
+    charts.mountChart('chart-exposure-commodity', {
+      type: 'bar',
+      data: {
+        labels: commodityLabels,
+        datasets: [{
+          label: 'Physical (000s)',
+          data: commodityValues,
+          backgroundColor: ['#004bff', '#1ab76c', '#8a5aff', '#ff8c42']
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false } },
+          y: { grid: { color: 'rgba(13,27,42,0.08)' } }
+        }
+      }
     });
 
-    // Carry Curve
-    charts.mountCarryCurve('chart-carry-curve', {
-      labels: ['Sep-Nov', 'Nov-Jan', 'Jan-Mar', 'Mar-May', 'May-Jul'],
-      values: [0.12, 0.15, 0.18, 0.20, 0.22].map(v => v + (Math.random() - 0.5) * 0.05)
-    });
+    const hedgeValues = commodityLabels.map((label) => exposure.byCommodity[label].hedged);
+    const physicalValues = commodityLabels.map((label) => exposure.byCommodity[label].physical);
+    const hedgeTotal = hedgeValues.reduce((a, b) => a + b, 0);
+    const physicalTotal = physicalValues.reduce((a, b) => a + b, 0);
 
-    // Hedge Coverage Gauges
-    const hedgeCoverageData = Object.entries(exposure.byCommodity)
-        .filter(([key]) => !commodityFilter || key === commodityFilter)
-        .reduce((acc, [key, value]) => {
-            acc[key] = (value.hedged / value.physical) * 100;
-            return acc;
-        }, {});
-    charts.mountHedgeCoverageGauges('[data-role="hedge-coverage-gauges"]', hedgeCoverageData);
-
-
-    // Variance Timeline
-    charts.mountVarianceTimeline('chart-variance-timeline', {
-      labels: Array.from({ length: 60 }, (_, i) => `Day ${i + 1}`),
-      values: Array.from({ length: 60 }, () => (Math.random() - 0.5) * 2)
-    });
-
-    // Basis Map
-    const basisHistory = data.getBasisHistory(commodityFilter || 'Corn');
-    charts.mountBasisMap('chart-basis-map', {
-        labels: basisHistory[Object.keys(basisHistory)[0]].map(d => new Date(d.date).toLocaleString('default', { month: 'short' })),
-        datasets: Object.entries(basisHistory).map(([zone, values]) => ({
-            label: zone,
-            data: values.map(d => d.basis)
-        }))
-    });
-
-    // News & Sentiment
-    const newsContainer = document.querySelector('[data-role="news-sentiment"]');
-    newsContainer.innerHTML = '';
-    const intel = data.getIntel();
-    intel.headlines.forEach(item => {
-      const el = utils.createElement('div', { className: 'news-item', html: `<h5>${item.headline}</h5><p>${item.takeaway}</p>` });
-      newsContainer.appendChild(el);
-    });
-
-    // Exceptions & Alerts
-    const alertsContainer = document.querySelector('[data-role="exceptions-alerts"]');
-    alertsContainer.innerHTML = `
-      <div class="alert">Low coverage &lt;60% on Wheat</div>
-      <div class="alert">Aging lot &gt; 30 days in Fargo</div>
-      <div class="alert">Large MTM move &gt; 2σ on Soybeans</div>
-    `;
-
-    // Live Tickers
-    const tickersContainer = document.querySelector('[data-role="live-tickers"]');
-    tickersContainer.innerHTML = '';
-    const tickers = [
-      { symbol: 'ZS', month: 'Nov-24', price: 13.45, change: 0.02 },
-      { symbol: 'ZC', month: 'Dec-24', price: 5.15, change: -0.01 },
-      { symbol: 'ZW', month: 'Dec-24', price: 7.90, change: 0.05 },
-      { symbol: 'RS', month: 'Nov-24', price: 705, change: 1.50 }
-    ];
-    tickers.forEach(ticker => {
-      const el = utils.createElement('div', { className: 'ticker', html: `<strong>${ticker.symbol} ${ticker.month}</strong> ${ticker.price.toFixed(2)} <span class="${ticker.change >= 0 ? 'up' : 'down'}">${ticker.change.toFixed(2)}</span>` });
-      tickersContainer.appendChild(el);
+    charts.mountChart('chart-hedge-physical', {
+      type: 'doughnut',
+      data: {
+        labels: ['Hedged', 'Physical'],
+        datasets: [{
+          data: [hedgeTotal, physicalTotal],
+          backgroundColor: ['#1ab76c', '#004bff'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        cutout: '68%',
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
     });
   }
 

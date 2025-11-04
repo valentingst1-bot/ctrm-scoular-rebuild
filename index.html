@@ -92,61 +92,28 @@
       </header>
 
       <section class="view" data-route="#/trader" aria-labelledby="view-trader">
-        <div class="view-header">
-          <h2 id="view-trader" class="view-title">Trader Console</h2>
-          <div class="toolbar">
-            <div class="filters">
-              <label>Commodity
-                <select data-filter="commodity">
-                  <option value="">All</option>
-                  <option>Soybeans</option>
-                  <option>Corn</option>
-                  <option>Wheat</option>
-                  <option>Canola</option>
-                </select>
-              </label>
-              <label>Snapshot
-                <select data-filter="snapshot">
-                  <option value="live">Live</option>
-                  <option value="monthEnd">Month-End</option>
-                </select>
-              </label>
+        <h2 id="view-trader" class="view-title">Trader Console</h2>
+        <div class="view-grid trader-grid">
+          <section class="card trader-snapshot">
+            <header class="card__header">
+              <h3>Daily Highlights</h3>
+              <p class="card__subtitle">Snapshot of key exposures and moves</p>
+            </header>
+            <div class="card__body">
+              <ul class="bullet-list" data-role="trader-bulletins"></ul>
             </div>
-          </div>
-        </div>
-        <div class="trader-tickers" data-role="live-tickers"></div>
-        <div class="view-grid trader-grid-expanded">
-          <section class="card trader-news">
-            <header class="card__header"><h3>News &amp; Sentiment</h3></header>
-            <div class="card__body" data-role="news-sentiment"></div>
           </section>
-          <section class="card trader-alerts">
-            <header class="card__header"><h3>Exceptions &amp; Alerts</h3></header>
-            <div class="card__body" data-role="exceptions-alerts"></div>
+          <section class="card" aria-label="MTM Trend">
+            <header class="card__header"><h3>MTM Trend</h3></header>
+            <canvas id="chart-mtm-trend" height="180"></canvas>
           </section>
-          <section class="card wide" aria-label="P&L Waterfall">
-            <header class="card__header"><h3>P&amp;L Waterfall</h3></header>
-            <canvas id="chart-pnl-waterfall" height="200"></canvas>
+          <section class="card" aria-label="Exposure by Commodity">
+            <header class="card__header"><h3>Exposure by Commodity</h3></header>
+            <canvas id="chart-exposure-commodity" height="180"></canvas>
           </section>
-          <section class="card tall" aria-label="Exposure Heatmap">
-            <header class="card__header"><h3>Exposure Heatmap</h3></header>
-            <canvas id="chart-exposure-heatmap" height="400"></canvas>
-          </section>
-          <section class="card" aria-label="Carry Curve">
-            <header class="card__header"><h3>Carry Curve</h3></header>
-            <canvas id="chart-carry-curve" height="180"></canvas>
-          </section>
-          <section class="card" aria-label="Hedge Coverage">
-            <header class="card__header"><h3>Hedge Coverage</h3></header>
-            <div class="card__body gauge-container" data-role="hedge-coverage-gauges"></div>
-          </section>
-          <section class="card wide" aria-label="Variance Timeline">
-            <header class="card__header"><h3>Variance Timeline</h3></header>
-            <canvas id="chart-variance-timeline" height="180"></canvas>
-          </section>
-          <section class="card tall" aria-label="Basis Map">
-            <header class="card__header"><h3>Basis Map</h3></header>
-            <canvas id="chart-basis-map" height="400"></canvas>
+          <section class="card" aria-label="Hedge vs Physical">
+            <header class="card__header"><h3>Hedge vs Physical</h3></header>
+            <canvas id="chart-hedge-physical" height="180"></canvas>
           </section>
         </div>
       </section>
